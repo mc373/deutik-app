@@ -81,7 +81,7 @@ const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
       withinPortal={false}
     >
       <Combobox.Target>
-        <Input.Wrapper label="德语单词搜索">
+        <Input.Wrapper>
           <TextInput
             placeholder={placeholder}
             value={inputValue}

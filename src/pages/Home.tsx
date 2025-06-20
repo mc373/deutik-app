@@ -63,14 +63,10 @@ export default function Home() {
             </Button>
           )}
           <div style={{ maxWidth: 400, margin: "0 auto", padding: 20 }}>
-            <h2>多级词汇搜索 (Combobox实现)</h2>
             <MultiSourceCombobox
               wordLists={wordLists}
               onSelect={(word) => console.log("选中:", word)}
             />
-            <p style={{ marginTop: 10, color: "#666" }}>
-              提示：输入至少3个字符后开始搜索，会依次从基础、中级、高级词汇中查找
-            </p>
           </div>
         </Group>
       </AppShell.Header>
