@@ -50,7 +50,7 @@ export function parseWordListWithValidation(csvString: string): {
         try {
           return line.trim().replace(/^"|"$/g, "");
         } catch (err) {
-          result.errors.push(`行 ${i + 2} 解析失败: ${line}`);
+          result.errors.push(`行 ${i + 2} 解析失败: ${line}  ${err}`);
           return "";
         }
       })

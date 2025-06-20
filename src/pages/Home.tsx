@@ -1,15 +1,8 @@
 import { useDisclosure } from "@mantine/hooks";
-import {
-  AppShell,
-  Group,
-  Burger,
-  Skeleton,
-  Button,
-  Autocomplete,
-} from "@mantine/core";
+import { AppShell, Group, Burger, Skeleton, Button } from "@mantine/core";
 import { UserButton, useClerk } from "@clerk/clerk-react";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 import { parseSimpleWordList } from "../utils/tools";
 import MultiSourceCombobox from "../components/MultiSourceCombobox";

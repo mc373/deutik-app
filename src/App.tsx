@@ -10,7 +10,7 @@ import {
 import Home from "./pages/Home";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
-import { ClerkProvider, useAuth } from "@clerk/clerk-react";
+import { useAuth } from "@clerk/clerk-react";
 
 // 子组件：保护路由（检查登录状态）
 function ProtectedRoute({ children }: { children: React.ReactNode }) {

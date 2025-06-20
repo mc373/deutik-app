@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Combobox, TextInput, useCombobox, Input } from "@mantine/core";
 import type { ComboboxItem } from "@mantine/core";
 
@@ -19,6 +19,12 @@ const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
     onDropdownClose: () => combobox.resetSelectedOption(),
   });
 
+  // 使用 ref 保存 combobox 方法以避免重新渲染
+  const comboboxRef = useRef(combobox);
+  useEffect(() => {
+    comboboxRef.current = combobox;
+  }, [combobox]);
+
   const [inputValue, setInputValue] = useState("");
   const [filteredWords, setFilteredWords] = useState<ComboboxItem[]>([]);
   const [activeListIndex, setActiveListIndex] = useState(0);
@@ -29,9 +35,13 @@ const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
 
   // 筛选逻辑
   useEffect(() => {
+    const { resetSelectedOption, closeDropdown, openDropdown } =
+      comboboxRef.current;
+
     if (inputValue.length < 3) {
       setFilteredWords([]);
-      combobox.closeDropdown();
+      resetSelectedOption();
+      closeDropdown();
       return;
     }
 
@@ -55,7 +65,7 @@ const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
     }
 
     setFilteredWords(toComboboxItems(results));
-    combobox.openDropdown();
+    openDropdown();
   }, [inputValue, wordLists, activeListIndex, maxSuggestions]);
 
   const handleOptionSubmit = (value: string) => {
