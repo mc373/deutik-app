@@ -6,34 +6,34 @@ import { useState, useEffect } from "react";
 
 import { parseSimpleWordList } from "../utils/tools";
 import MultiSourceCombobox from "../components/MultiSourceCombobox";
+import MainCard from "../components/MainCard";
+import type { WordData } from "../components/MainCard";
+import { getWordByKey, initializeDB } from "../utils/db"; // 假设你有一个WordRecord类型定义
 export default function Home() {
   const [opened, { toggle }] = useDisclosure();
   const { user } = useClerk();
 
   const [wordLists, seWordLists] = useState<any[]>([]); // 使用any[]类型来存储解析后的数据
   const parseCSV = async () => {
-    const response = await fetch("/data/wordlist_fup2.csv");
+    const response = await fetch("/data/json10000.csv");
     const text = await response.text();
-    console.log("CSV内容：", text); // 打印CSV内容以调试
+
     return new Promise((resolve) => {
       resolve(parseSimpleWordList(text)); // 得到对象数组
     });
   };
-  // const wordLists = [
-  //   ["Apfel", "Banane", "Computer", "Dokument"], // 基础词汇
-  //   ["Abend", "Buch", "Chemie", "Datum"], // 中级词汇
-  //   ["Aktie", "Börse", "Dividende", "Ertrag"], // 高级/专业词汇
-  // ];
+  const [curWordData, setCurWordData] = useState<WordData>({} as WordData);
+
   useEffect(() => {
     const fetchData = async () => {
       const result = await parseCSV();
 
       if ((result as any[]).length > 0) {
         seWordLists([result] as any[]); // 将解析后的数据存储到状态中
-        console.log(result);
       }
     };
     fetchData();
+    initializeDB();
   }, []);
 
   return (
@@ -65,7 +65,19 @@ export default function Home() {
           <div style={{ maxWidth: 400, margin: "0 auto", padding: 20 }}>
             <MultiSourceCombobox
               wordLists={wordLists}
-              onSelect={(word) => console.log("选中:", word)}
+              onSelect={async (word) => {
+                try {
+                  const record = await getWordByKey(word); // 返回 WordRecord | undefined
+                  if (record) {
+                    setCurWordData(record.jsonData); // 假设 setCurWordData 需要的是 WordData
+                    console.log("Selected word data:", record.jsonData);
+                  } else {
+                    console.warn(`Word "${word}" not found in database`);
+                  }
+                } catch (err) {
+                  console.error("Failed to fetch word data:", err);
+                }
+              }}
             />
           </div>
         </Group>
@@ -80,7 +92,11 @@ export default function Home() {
           ))}
       </AppShell.Navbar>
       <AppShell.Main>
-        {user ? <div>欢迎，{user.username}!</div> : ""}
+        <>
+          {Object.keys(curWordData).length !== 0 && (
+            <MainCard {...curWordData} />
+          )}
+        </>
       </AppShell.Main>
       <AppShell.Aside p="md">Aside</AppShell.Aside>
       <AppShell.Footer p="md">Footer</AppShell.Footer>
