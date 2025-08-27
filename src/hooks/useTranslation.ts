@@ -1,4 +1,4 @@
-import { useGlobalState } from "../contexts/GlobalStateContext_bak";
+import { useGlobalState } from "../contexts/GlobalStateContext";
 import { resources } from "../locales/types";
 import { useMemo } from "react";
 

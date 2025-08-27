@@ -1,4 +1,4 @@
-import { useGlobalState } from "../contexts/GlobalStateContext_bak";
+import { useGlobalState } from "../contexts/GlobalStateContext";
 
 // src/locales/types.ts
 type TranslationKey =

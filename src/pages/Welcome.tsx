@@ -15,7 +15,7 @@ import {
 } from "@mantine/core";
 import { SignedIn, SignedOut } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
-import { useGlobalState } from "../contexts/GlobalStateContext_bak";
+import { useGlobalState } from "../contexts/GlobalStateContext";
 import {
   BookOpen,
   Mic,
