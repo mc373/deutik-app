@@ -1,105 +1,164 @@
-import { useDisclosure } from "@mantine/hooks";
-import { AppShell, Group, Burger, Skeleton, Button } from "@mantine/core";
+import {
+  AppShell,
+  Group,
+  Button,
+  ActionIcon,
+  Box,
+  Text,
+  useMantineColorScheme,
+} from "@mantine/core";
 import { UserButton, useClerk } from "@clerk/clerk-react";
+import { useEffect } from "react";
+import { IconSun, IconMoon, IconSearch } from "@tabler/icons-react";
+import LanguageSwitcher from "../components/LanguageSwitcher";
+import { initializeDB } from "../utils/db";
 
-import { useState, useEffect } from "react";
+import { GridMenu } from "../components/GridMenu";
+import Searching from "./Searching";
+import Learning from "./Learning";
+import Unregelverb from "./Unregelverb";
+import Vocabulary from "./Vocabulary";
 
-import { parseSimpleWordList } from "../utils/tools";
-import MultiSourceCombobox from "../components/MultiSourceCombobox";
-import MainCard from "../components/MainCard";
-import type { WordData } from "../components/MainCard";
-import { getWordByKey, initializeDB } from "../utils/db"; // 假设你有一个WordRecord类型定义
+import { Routes, Route, Navigate } from "react-router-dom";
+import Pronunciation from "./Pronunciation";
+import { useApp } from "../contexts/AppContext";
+
 export default function Home() {
-  const [opened, { toggle }] = useDisclosure();
   const { user } = useClerk();
-
-  const [wordLists, seWordLists] = useState<any[]>([]); // 使用any[]类型来存储解析后的数据
-  const parseCSV = async () => {
-    const response = await fetch("/data/json10000.csv");
-    const text = await response.text();
-
-    return new Promise((resolve) => {
-      resolve(parseSimpleWordList(text)); // 得到对象数组
-    });
-  };
-  const [curWordData, setCurWordData] = useState<WordData>({} as WordData);
-
+  const { colorScheme, toggleColorScheme } = useMantineColorScheme();
+  const { t } = useApp();
   useEffect(() => {
-    const fetchData = async () => {
-      const result = await parseCSV();
-
-      if ((result as any[]).length > 0) {
-        seWordLists([result] as any[]); // 将解析后的数据存储到状态中
-      }
-    };
-    fetchData();
     initializeDB();
   }, []);
 
   return (
     <AppShell
       header={{ height: 60 }}
-      footer={{ height: 60 }}
-      navbar={{ width: 300, breakpoint: "sm", collapsed: { mobile: !opened } }}
       aside={{
-        width: 300,
+        width: { base: 300, lg: 380 },
         breakpoint: "md",
-        collapsed: { desktop: false, mobile: true },
+        collapsed: { mobile: true },
       }}
       padding="md"
     >
-      <AppShell.Header>
-        <Group h="100%" px="md">
-          <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-          {user ? (
-            <UserButton />
-          ) : (
-            <Button
-              onClick={() => {
-                /* 触发登录 */
-              }}
-            >
-              登录
-            </Button>
-          )}
-          <div style={{ maxWidth: 400, margin: "0 auto", padding: 20 }}>
-            <MultiSourceCombobox
-              wordLists={wordLists}
-              onSelect={async (word) => {
-                try {
-                  const record = await getWordByKey(word); // 返回 WordRecord | undefined
-                  if (record) {
-                    setCurWordData(record.jsonData); // 假设 setCurWordData 需要的是 WordData
-                    console.log("Selected word data:", record.jsonData);
-                  } else {
-                    console.warn(`Word "${word}" not found in database`);
-                  }
-                } catch (err) {
-                  console.error("Failed to fetch word data:", err);
-                }
+      <AppShell.Header
+        p="md"
+        bg={colorScheme === "dark" ? "dark.7" : "white"}
+        style={{
+          borderBottom:
+            colorScheme === "dark"
+              ? "1px solid var(--mantine-color-dark-4)"
+              : "1px solid var(--mantine-color-gray-2)",
+        }}
+      >
+        <Group justify="space-between" h="100%">
+          <Group>
+            <img
+              src={
+                colorScheme === "dark"
+                  ? "/assets/deutik_img_light.png"
+                  : "/assets/deutik_img.png"
+              }
+              alt="Deutik Logo"
+              style={{
+                width: "80px",
+                height: "20px",
               }}
             />
-          </div>
+
+            <Group gap="sm" visibleFrom="sm">
+              <Button
+                variant="subtle"
+                size="sm"
+                component="a"
+                href="/"
+                c={colorScheme === "dark" ? "gray.2" : "dark.7"}
+              >
+                {t("app.home")}
+              </Button>
+            </Group>
+          </Group>
+
+          <Group gap="sm">
+            <ActionIcon
+              variant="subtle"
+              size="lg"
+              onClick={toggleColorScheme}
+              aria-label="切换主题"
+              c={colorScheme === "dark" ? "gray.2" : "dark.7"}
+            >
+              {colorScheme === "dark" ? (
+                <IconSun size={20} />
+              ) : (
+                <IconMoon size={20} />
+              )}
+            </ActionIcon>
+
+            <LanguageSwitcher />
+
+            {user ? (
+              <UserButton />
+            ) : (
+              <Button
+                variant="filled"
+                size="sm"
+                onClick={() => {
+                  /* 触发登录 */
+                }}
+              >
+                {t("app.login")}
+              </Button>
+            )}
+          </Group>
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="md">
-        Navbar
-        {Array(15)
-          .fill(0)
-          .map((_, index) => (
-            <Skeleton key={index} h={28} mt="sm" animate={false} />
-          ))}
-      </AppShell.Navbar>
-      <AppShell.Main>
-        <>
-          {Object.keys(curWordData).length !== 0 && (
-            <MainCard {...curWordData} />
-          )}
-        </>
+      <AppShell.Main bg={colorScheme === "dark" ? "dark.8" : "gray.0"}>
+        <Box
+          p="xl"
+          bg={colorScheme === "dark" ? "dark.6" : "white"}
+          style={{
+            borderRadius: "var(--mantine-radius-lg)",
+            minHeight: "100%",
+          }}
+        >
+          <Routes>
+            <Route path="/" element={<GridMenu />} />
+            <Route path="/learn" element={<Learning />} />
+            <Route path="/unregelverb" element={<Unregelverb />} />
+            <Route path="/vocabulary" element={<Vocabulary />} />
+            <Route path="/pronunciation" element={<Pronunciation />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Box>
       </AppShell.Main>
-      <AppShell.Aside p="md">Aside</AppShell.Aside>
-      <AppShell.Footer p="md">Footer</AppShell.Footer>
+
+      <AppShell.Aside
+        p="md"
+        bg={colorScheme === "dark" ? "dark.7" : "white"}
+        style={{
+          borderLeft:
+            colorScheme === "dark"
+              ? "1px solid var(--mantine-color-dark-4)"
+              : "1px solid var(--mantine-color-gray-2)",
+        }}
+      >
+        <Box
+          style={{
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <Group mb="md" gap="xs">
+            <IconSearch size={18} />
+            <Text size="sm" fw={500}>
+              {t("app.wordserach")}
+            </Text>
+          </Group>
+          <Searching />
+        </Box>
+      </AppShell.Aside>
     </AppShell>
   );
 }

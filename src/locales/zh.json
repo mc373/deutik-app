@@ -1,0 +1,16 @@
+{
+  "app.login": "登录",
+  "app.signup": "注册",
+  "app.wordserach": "单词搜索",
+  "app.inputword": "输入搜索单词",
+  "app.home": "首页",
+  "app.wordnomatch": "没有找到匹配的单词",
+  "app.tabseraching": "正在搜索列表",
+  "app.loading": "加载中...",
+  "app.retry": "重试",
+  "app.close": "关闭",
+  "word.notFound": "未找到单词数据",
+  "word.germanExample": "德语例句",
+  "error.noWordProvided": "未提供单词",
+  "error.fetchFailed": "获取数据失败"
+}

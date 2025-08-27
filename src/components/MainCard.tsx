@@ -8,16 +8,22 @@ import {
   Accordion,
   Table,
   Title,
+  ActionIcon,
 } from "@mantine/core";
-import IconInfoCircle from "@tabler/icons-react/dist/esm/icons/IconInfoCircle";
-import IconLanguage from "@tabler/icons-react/dist/esm/icons/IconLanguage";
-import IconBook from "@tabler/icons-react/dist/esm/icons/IconBook";
-import IconBulb from "@tabler/icons-react/dist/esm/icons/IconBulb";
+import { useState } from "react";
+import {
+  Info,
+  Languages,
+  BookOpen,
+  Lightbulb,
+  LanguagesIcon,
+  Globe,
+} from "lucide-react";
 
 export interface WordData {
   word: string;
   pos: string | null;
-  plural: string | null; // 可选复数形式
+  plural: string | null;
   gender: "m" | "f" | "n" | null;
   phonetic: string;
   syllabledivi: string;
@@ -38,7 +44,7 @@ export interface WordData {
       de: string;
     };
     example_lang: {
-      prhase: string;
+      phrase: string;
       translation: {
         zh: string;
         en: string;
@@ -75,14 +81,14 @@ export interface WordData {
 }
 
 interface WordCardProps {
-  wordData: WordData; // 使用您的 JSON 数据结构类型
+  wordData: WordData;
 }
 
 const WordCard = ({ wordData }: WordCardProps) => {
-  console.log("WordCard rendered with data:", wordData);
+  const [activeLang, setActiveLang] = useState<"zh" | "en">("zh");
+
   return (
     <Card shadow="sm" padding="lg" radius="md" withBorder w="100%" maw={600}>
-      {/* 顶部基础信息 */}
       <Group justify="space-between" mb="xs">
         <Group gap="xs">
           <Title order={2}>{wordData.word}</Title>
@@ -99,14 +105,26 @@ const WordCard = ({ wordData }: WordCardProps) => {
             </Badge>
           )}
         </Group>
-
         <Group gap="xs">
-          <Badge color="teal" variant="light">
+          <Badge color="teal" variant="filled">
             CEFR: {wordData.stats.CEFR_level}
           </Badge>
-          <Badge color="gray" variant="light">
-            词频: {wordData.stats.frequency_rank}
-          </Badge>
+          <ActionIcon
+            variant="subtle"
+            color={activeLang === "zh" ? "blue" : "gray"}
+            onClick={() => setActiveLang("zh")}
+            title="中文"
+          >
+            <LanguagesIcon size={18} />
+          </ActionIcon>
+          <ActionIcon
+            variant="subtle"
+            color={activeLang === "en" ? "blue" : "gray"}
+            onClick={() => setActiveLang("en")}
+            title="English"
+          >
+            <Globe size={18} />
+          </ActionIcon>
         </Group>
       </Group>
 
@@ -118,10 +136,9 @@ const WordCard = ({ wordData }: WordCardProps) => {
 
       <Divider my="sm" />
 
-      {/* 核心解释 */}
       <Stack gap="sm" mb="md">
         <Group gap="xs">
-          <IconLanguage size={18} />
+          <Languages size={18} />
           <Text fw={500}>核心释义</Text>
         </Group>
 
@@ -135,31 +152,32 @@ const WordCard = ({ wordData }: WordCardProps) => {
             </Text>
             <Text size="sm" mb="xs">
               <Text span fw={500}>
-                例句:
-              </Text>{" "}
-              {meaning.example_lang[0].translation.zh}
+                {meaning.example_lang[0].phrase}
+              </Text>
+              <Text span fw={500}>
+                {meaning.example_lang[0].translation.zh}
+              </Text>
             </Text>
             {index < wordData.meanings.length - 1 && <Divider my="xs" />}
           </div>
         ))}
       </Stack>
 
-      {/* 助记信息 */}
       <Accordion variant="contained" mb="md">
         <Accordion.Item value="memory">
-          <Accordion.Control icon={<IconBulb size={18} />}>
+          <Accordion.Control icon={<Lightbulb size={18} />}>
             助记技巧
           </Accordion.Control>
           <Accordion.Panel>
+            <Text size="sm">{wordData.association_lang.de}</Text>
             <Text size="sm">{wordData.association_lang.zh}</Text>
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>
 
-      {/* 扩展信息 */}
       <Accordion variant="contained" mb="md">
         <Accordion.Item value="phrases">
-          <Accordion.Control icon={<IconBook size={18} />}>
+          <Accordion.Control icon={<BookOpen size={18} />}>
             常用短语
           </Accordion.Control>
           <Accordion.Panel>
@@ -177,7 +195,7 @@ const WordCard = ({ wordData }: WordCardProps) => {
         </Accordion.Item>
 
         <Accordion.Item value="more-info">
-          <Accordion.Control icon={<IconInfoCircle size={18} />}>
+          <Accordion.Control icon={<Info size={18} />}>
             更多信息
           </Accordion.Control>
           <Accordion.Panel>
@@ -212,6 +230,7 @@ const WordCard = ({ wordData }: WordCardProps) => {
                 <Text fw={500} size="sm">
                   文化提示:
                 </Text>
+                <Text size="sm">{wordData.cultural_usage_tip.content}</Text>
                 <Text size="sm">
                   {wordData.cultural_usage_tip.translation.zh}
                 </Text>
@@ -224,13 +243,6 @@ const WordCard = ({ wordData }: WordCardProps) => {
   );
 };
 
-// 使用示例
-
 export default function MainCard(wordData: WordData) {
-  return (
-    <WordCard
-      wordData={wordData} // 替换为实际的JSON数据
-    />
-    // <div>aaa</div>
-  );
+  return <WordCard wordData={wordData} />;
 }

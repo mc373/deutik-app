@@ -1,0 +1,136 @@
+.german-word-container {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  color: #333;
+  line-height: 1.6;
+}
+
+.word-header {
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.word-title {
+  color: #2c3e50;
+  margin-bottom: 10px;
+  font-size: 2.2rem;
+}
+
+.word-pronunciation,
+.word-category,
+.word-frequency {
+  margin: 5px 0;
+  font-size: 0.9rem;
+  color: #7f8c8d;
+}
+
+.level-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background-color: #3498db;
+  color: white;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.section-title {
+  color: #2c3e50;
+  font-size: 1.4rem;
+  margin: 25px 0 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.meaning-item {
+  background-color: #f9f9f9;
+  padding: 15px;
+  margin-bottom: 15px;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.meaning-focus,
+.meaning-definition,
+.meaning-example {
+  margin-bottom: 10px;
+}
+
+.meaning-score {
+  font-size: 0.8rem;
+  color: #95a5a6;
+  text-align: right;
+}
+
+.example-german {
+  font-weight: bold;
+  color: #2c3e50;
+  margin: 5px 0;
+}
+
+.example-translation,
+.phrase-translation {
+  color: #7f8c8d;
+  font-style: italic;
+  margin-left: 15px;
+}
+
+.phrases-list {
+  list-style-type: none;
+  padding: 0;
+}
+
+.phrase-item {
+  padding: 10px 0;
+  border-bottom: 1px dashed #eee;
+}
+
+.phrase-german {
+  font-weight: 500;
+}
+
+.cultural-text {
+  background-color: #f0f7fd;
+  padding: 15px;
+  border-left: 4px solid #3498db;
+  border-radius: 0 4px 4px 0;
+}
+
+.loading-indicator,
+.error-message,
+.no-data {
+  text-align: center;
+  padding: 20px;
+  color: #7f8c8d;
+}
+
+.error-message {
+  color: #e74c3c;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .german-word-container {
+    padding: 15px;
+  }
+
+  .word-title {
+    font-size: 1.8rem;
+  }
+
+  .section-title {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .word-title {
+    font-size: 1.5rem;
+  }
+
+  .meaning-item {
+    padding: 10px;
+  }
+}

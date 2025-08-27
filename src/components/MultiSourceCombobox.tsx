@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Combobox, TextInput, useCombobox, Input } from "@mantine/core";
 import type { ComboboxItem } from "@mantine/core";
+import { useApp } from "../contexts/AppContext";
 
 interface MultiSourceComboboxProps {
   wordLists: string[][];
@@ -12,7 +13,6 @@ interface MultiSourceComboboxProps {
 const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
   wordLists,
   maxSuggestions = 10,
-  placeholder = "输入搜索词...",
   onSelect,
 }) => {
   const combobox = useCombobox({
@@ -27,6 +27,7 @@ const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
   const [inputValue, setInputValue] = useState("");
   const [filteredWords, setFilteredWords] = useState<ComboboxItem[]>([]);
   const [activeListIndex, setActiveListIndex] = useState(0);
+  const { t } = useApp();
 
   const toComboboxItems = (words: string[]): ComboboxItem[] =>
     words.map((word) => ({ value: word, label: word }));
@@ -74,6 +75,16 @@ const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
     combobox.closeDropdown();
   };
 
+  // 添加鼠标点击处理函数
+  const handleOptionClick = (value: string) => {
+    setInputValue(value);
+    onSelect?.(value);
+    // 添加延迟关闭，确保点击事件处理完成
+    setTimeout(() => {
+      combobox.closeDropdown();
+    }, 100);
+  };
+
   return (
     <Combobox
       store={combobox}
@@ -83,7 +94,7 @@ const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
       <Combobox.Target>
         <Input.Wrapper>
           <TextInput
-            placeholder={placeholder}
+            placeholder={t("app.inputword")}
             value={inputValue}
             onChange={(event) => {
               setInputValue(event.currentTarget.value);
@@ -94,7 +105,10 @@ const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
             }}
             onClick={() => inputValue.length > 0 && combobox.openDropdown()}
             onFocus={() => inputValue.length > 0 && combobox.openDropdown()}
-            onBlur={() => combobox.closeDropdown()}
+            onBlur={() => {
+              // 添加延迟，避免立即关闭导致点击选项失效
+              setTimeout(() => combobox.closeDropdown(), 200);
+            }}
           />
         </Input.Wrapper>
       </Combobox.Target>
@@ -103,7 +117,15 @@ const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
         <Combobox.Options>
           {filteredWords.length > 0 ? (
             filteredWords.map((item) => (
-              <Combobox.Option value={item.value} key={item.value}>
+              <Combobox.Option
+                value={item.value}
+                key={item.value}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  handleOptionClick(item.value);
+                }}
+              >
                 {item.label}
               </Combobox.Option>
             ))
@@ -111,9 +133,11 @@ const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
             <Combobox.Empty>
               {inputValue.length >= 1
                 ? activeListIndex === wordLists.length - 1
-                  ? "没有找到匹配的单词"
-                  : `正在搜索列表 ${activeListIndex + 1}/${wordLists.length}...`
-                : "输入搜索词"}
+                  ? t("app.wordnomatch")
+                  : `${t("app.tabseraching")} ${activeListIndex + 1}/${
+                      wordLists.length
+                    }...`
+                : t("app.inputword")}
             </Combobox.Empty>
           )}
         </Combobox.Options>
