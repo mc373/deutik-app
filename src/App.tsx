@@ -9,7 +9,7 @@ import {
 } from "react-router-dom";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
-import { useAuth } from "@clerk/clerk-react";
+
 import Welcome from "./pages/Welcome";
 import { Suspense } from "react";
 import Home from "./pages/Home";
@@ -22,26 +22,6 @@ function AuthLoading() {
     </div>
   );
 }
-
-// 保护路由组件
-// function ProtectedRoute({ children }: { children: React.ReactNode }) {
-//   const { isLoaded, isSignedIn } = useAuth();
-
-//   if (!isLoaded) return <AuthLoading />;
-//   if (!isSignedIn) return <Navigate to="/welcome" replace />;
-
-//   return children;
-// }
-
-// // 公开路由组件
-// function PublicRoute({ children }: { children: React.ReactNode }) {
-//   const { isLoaded, isSignedIn } = useAuth();
-
-//   if (!isLoaded) return <AuthLoading />;
-//   if (isSignedIn) return <Navigate to="/" replace />;
-
-//   return children;
-// }
 
 export default function App() {
   return (

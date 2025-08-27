@@ -77,7 +77,7 @@ function VerbScroller({
   const [speed, setSpeed] = useState<number>(initialSpeed);
   const [rowDelay, setRowDelay] = useState<number>(initialRowDelay);
   const [isLoop, setIsLoop] = useState<boolean>(loop);
-  const [setIsPlayingAudio] = useState<boolean>(false);
+
   const [currentPlayingWord, setCurrentPlayingWord] = useState<string | null>(
     null
   );
