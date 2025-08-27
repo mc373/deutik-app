@@ -120,26 +120,26 @@ const GermanWordLearning = () => {
     setCurrentIndex((prev) => prev + 1);
   };
 
-  const markAsKnown = () => {
-    if (!currentWord) return;
+  // const markAsKnown = () => {
+  //   if (!currentWord) return;
 
-    const updatedWords = words.map((word) =>
-      word.id === currentWord.id
-        ? {
-            ...word,
-            isKnown: true,
-            familiarity: 100,
-            nextReviewDate: calculateNextReviewDate(
-              100,
-              word.consecutiveCorrect
-            ),
-          }
-        : word
-    );
+  //   const updatedWords = words.map((word) =>
+  //     word.id === currentWord.id
+  //       ? {
+  //           ...word,
+  //           isKnown: true,
+  //           familiarity: 100,
+  //           nextReviewDate: calculateNextReviewDate(
+  //             100,
+  //             word.consecutiveCorrect
+  //           ),
+  //         }
+  //       : word
+  //   );
 
-    setWords(updatedWords);
-    nextWord();
-  };
+  //   setWords(updatedWords);
+  //   nextWord();
+  // };
 
   return (
     <Box p="md" maw={600} mx="auto">

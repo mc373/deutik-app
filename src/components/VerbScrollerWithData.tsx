@@ -77,7 +77,7 @@ function VerbScroller({
   const [speed, setSpeed] = useState<number>(initialSpeed);
   const [rowDelay, setRowDelay] = useState<number>(initialRowDelay);
   const [isLoop, setIsLoop] = useState<boolean>(loop);
-  const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
+  const [setIsPlayingAudio] = useState<boolean>(false);
   const [currentPlayingWord, setCurrentPlayingWord] = useState<string | null>(
     null
   );
@@ -173,7 +173,7 @@ function VerbScroller({
     if (!filteredVerbs[currentIndexRef.current] || !isPlayingRef.current)
       return false;
 
-    setIsPlayingAudio(true);
+    // setIsPlayingAudio(true);
     const currentVerb = filteredVerbs[currentIndexRef.current];
 
     const wordsToPlay = [
@@ -209,7 +209,7 @@ function VerbScroller({
       }
     }
 
-    setIsPlayingAudio(false);
+    // setIsPlayingAudio(false);
     setCurrentPlayingWord(null);
 
     return true;
@@ -322,7 +322,7 @@ function VerbScroller({
       // 立即停止
       setPlaying(false);
       isPlayingRef.current = false;
-      setIsPlayingAudio(false);
+      // setIsPlayingAudio(false);
       setCurrentPlayingWord(null);
 
       if (timerRef.current) {

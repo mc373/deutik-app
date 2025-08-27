@@ -2,7 +2,6 @@ import {
   NavLink,
   ScrollArea,
   Group,
-  Text,
   ThemeIcon,
   Divider,
   Box,
@@ -12,7 +11,6 @@ import {
   BookOpen,
   BookMarked,
   Activity,
-  Settings,
   LogIn,
   UserPlus,
 } from "lucide-react";
@@ -28,11 +26,6 @@ function AppNavbar({ currentPath }: AppNavbarProps) {
     { icon: <BookOpen size="1rem" />, label: "学习", to: "/learn" },
     { icon: <BookMarked size="1rem" />, label: "单词本", to: "/vocabulary" },
     { icon: <Activity size="1rem" />, label: "进度统计", to: "/progress" },
-  ];
-
-  const authLinks = [
-    { icon: <LogIn size="1rem" />, label: "登录", to: "/login" },
-    { icon: <UserPlus size="1rem" />, label: "注册", to: "/signup" },
   ];
 
   return (

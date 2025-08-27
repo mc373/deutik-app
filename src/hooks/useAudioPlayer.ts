@@ -10,6 +10,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
   const preloadAudio = useCallback(
     async (hash: string, text: string): Promise<void> => {
+      console.log(text);
       if (!hash || loadingAudios.has(hash)) return;
 
       setLoadingAudios((prev) => new Set(prev).add(hash));

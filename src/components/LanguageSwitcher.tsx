@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, Group, Menu, Avatar } from "@mantine/core";
+import { Button, Menu, Avatar } from "@mantine/core";
 import { useApp } from "../contexts/AppContext";
 
 const LanguageSwitcher: React.FC = () => {
