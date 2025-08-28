@@ -1,0 +1,11 @@
+/* src/styles/app-shell.css */
+.mantine-AppShell-aside {
+  transition: transform 0.2s ease-in-out !important;
+  will-change: transform;
+}
+
+@media (max-width: 768px) {
+  .mantine-AppShell-aside[data-collapsed="false"] {
+    transform: translateX(0);
+  }
+}

@@ -71,7 +71,7 @@ export function GridMenu() {
       icon: <Headphones size={24} />,
       title: "听听力",
       description: "提高听力理解能力",
-      path: "/listening",
+      path: "/test",
       color: "cyan",
     },
     {

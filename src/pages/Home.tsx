@@ -8,65 +8,74 @@ import {
   useMantineColorScheme,
 } from "@mantine/core";
 import { UserButton, useClerk } from "@clerk/clerk-react";
-import { useEffect } from "react";
+import { useMemo } from "react";
 import { IconSun, IconMoon, IconSearch } from "@tabler/icons-react";
 import LanguageSwitcher from "../components/LanguageSwitcher";
-import { initializeDB } from "../utils/db";
-
 import { GridMenu } from "../components/GridMenu";
 import Searching from "./Searching";
 import Learning from "./Learning";
 import Unregelverb from "./Unregelverb";
 import Vocabulary from "./Vocabulary";
-
+import { useDisclosure } from "@mantine/hooks";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Pronunciation from "./Pronunciation";
 import { useApp } from "../contexts/AppContext";
+import React from "react";
+import { createContext } from "react";
 
+export const AsideContext = createContext<{
+  opened: boolean;
+  toggle: () => void;
+}>({ opened: false, toggle: () => {} });
 export default function Home() {
   const { user } = useClerk();
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const { t } = useApp();
-  useEffect(() => {
-    initializeDB();
-  }, []);
+  const [opened, { toggle }] = useDisclosure();
+  const MemoizedGridMenu = React.memo(GridMenu);
+  const MemoizedLearning = React.memo(Learning);
+  const MemoizedUnregelverb = React.memo(Unregelverb);
+  const MemoizedVocabulary = React.memo(Vocabulary);
+  const MemoizedPronunciation = React.memo(Pronunciation); // 空依赖数组，确保只创建一次
 
+  // 使用 useMemo 记忆化整个路由部分
   return (
-    <AppShell
-      header={{ height: 60 }}
-      aside={{
-        width: { base: 300, lg: 380 },
-        breakpoint: "md",
-        collapsed: { mobile: true },
-      }}
-      padding="md"
-    >
-      <AppShell.Header
-        p="md"
-        bg={colorScheme === "dark" ? "dark.7" : "white"}
-        style={{
-          borderBottom:
-            colorScheme === "dark"
-              ? "1px solid var(--mantine-color-dark-4)"
-              : "1px solid var(--mantine-color-gray-2)",
+    <AsideContext.Provider value={{ opened, toggle }}>
+      <AppShell
+        header={{ height: 60 }}
+        aside={{
+          width: 300,
+          breakpoint: "sm",
+          collapsed: { mobile: !opened, desktop: false },
         }}
+        padding="md"
       >
-        <Group justify="space-between" h="100%">
-          <Group>
-            <img
-              src={
-                colorScheme === "dark"
-                  ? "/assets/deutik_img_light.png"
-                  : "/assets/deutik_img.png"
-              }
-              alt="Deutik Logo"
-              style={{
-                width: "80px",
-                height: "20px",
-              }}
-            />
+        <AppShell.Header
+          p="md"
+          bg={colorScheme === "dark" ? "dark.7" : "white"}
+          style={{
+            borderBottom:
+              colorScheme === "dark"
+                ? "1px solid var(--mantine-color-dark-4)"
+                : "1px solid var(--mantine-color-gray-2)",
+          }}
+        >
+          <Group justify="space-between" h="100%">
+            <Group>
+              <img
+                src={
+                  colorScheme === "dark"
+                    ? "/assets/deutik_img_light.png"
+                    : "/assets/deutik_img.png"
+                }
+                alt="Deutik Logo"
+                style={{
+                  width: "80px",
+                  height: "20px",
+                }}
+              />
 
-            <Group gap="sm" visibleFrom="sm">
+              {/* <Group gap="sm" visibleFrom="sm">
               <Button
                 variant="subtle"
                 size="sm"
@@ -76,89 +85,106 @@ export default function Home() {
               >
                 {t("app.home")}
               </Button>
+            </Group> */}
+            </Group>
+
+            <Group gap="sm">
+              <ActionIcon
+                variant="subtle"
+                size="lg"
+                onClick={toggleColorScheme}
+                aria-label="切换主题"
+                c={colorScheme === "dark" ? "gray.2" : "dark.7"}
+              >
+                {colorScheme === "dark" ? (
+                  <IconSun size={20} />
+                ) : (
+                  <IconMoon size={20} />
+                )}
+              </ActionIcon>
+
+              <LanguageSwitcher />
+
+              {user ? (
+                <UserButton />
+              ) : (
+                <Button
+                  variant="filled"
+                  size="sm"
+                  onClick={() => {
+                    /* 触发登录 */
+                  }}
+                >
+                  {t("app.login")}
+                </Button>
+              )}
             </Group>
           </Group>
+        </AppShell.Header>
 
-          <Group gap="sm">
-            <ActionIcon
-              variant="subtle"
-              size="lg"
-              onClick={toggleColorScheme}
-              aria-label="切换主题"
-              c={colorScheme === "dark" ? "gray.2" : "dark.7"}
-            >
-              {colorScheme === "dark" ? (
-                <IconSun size={20} />
-              ) : (
-                <IconMoon size={20} />
+        <AppShell.Main bg={colorScheme === "dark" ? "dark.8" : "gray.0"}>
+          <Box
+            p="xl"
+            bg={colorScheme === "dark" ? "dark.6" : "white"}
+            style={{
+              borderRadius: "var(--mantine-radius-lg)",
+              minHeight: "100%",
+            }}
+          >
+            <Routes>
+              {useMemo(
+                () => (
+                  <>
+                    <Route path="/" element={<MemoizedGridMenu />} />
+                    <Route path="/learn" element={<MemoizedLearning />} />
+                    <Route
+                      path="/unregelverb"
+                      element={<MemoizedUnregelverb />}
+                    />
+                    <Route
+                      path="/vocabulary"
+                      element={<MemoizedVocabulary />}
+                    />
+                    <Route
+                      path="/pronunciation"
+                      element={<MemoizedPronunciation />}
+                    />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </>
+                ),
+                []
               )}
-            </ActionIcon>
+            </Routes>
+          </Box>
+        </AppShell.Main>
 
-            <LanguageSwitcher />
-
-            {user ? (
-              <UserButton />
-            ) : (
-              <Button
-                variant="filled"
-                size="sm"
-                onClick={() => {
-                  /* 触发登录 */
-                }}
-              >
-                {t("app.login")}
-              </Button>
-            )}
-          </Group>
-        </Group>
-      </AppShell.Header>
-
-      <AppShell.Main bg={colorScheme === "dark" ? "dark.8" : "gray.0"}>
-        <Box
-          p="xl"
-          bg={colorScheme === "dark" ? "dark.6" : "white"}
+        <AppShell.Aside
+          p="md"
+          bg={colorScheme === "dark" ? "dark.7" : "white"}
           style={{
-            borderRadius: "var(--mantine-radius-lg)",
-            minHeight: "100%",
+            borderLeft:
+              colorScheme === "dark"
+                ? "1px solid var(--mantine-color-dark-4)"
+                : "1px solid var(--mantine-color-gray-2)",
           }}
         >
-          <Routes>
-            <Route path="/" element={<GridMenu />} />
-            <Route path="/learn" element={<Learning />} />
-            <Route path="/unregelverb" element={<Unregelverb />} />
-            <Route path="/vocabulary" element={<Vocabulary />} />
-            <Route path="/pronunciation" element={<Pronunciation />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Box>
-      </AppShell.Main>
-
-      <AppShell.Aside
-        p="md"
-        bg={colorScheme === "dark" ? "dark.7" : "white"}
-        style={{
-          borderLeft:
-            colorScheme === "dark"
-              ? "1px solid var(--mantine-color-dark-4)"
-              : "1px solid var(--mantine-color-gray-2)",
-        }}
-      >
-        <Box
-          style={{
-            height: "100%",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <Group mb="md" gap="xs">
-            <IconSearch size={18} />
-            <Text size="sm" fw={500}>
-              {t("app.wordserach")}
-            </Text>
-          </Group>
-          <Searching />
-        </Box>
-      </AppShell.Aside>
-    </AppShell>
+          <Box
+            style={{
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <Group mb="md" gap="xs">
+              <IconSearch size={18} />
+              <Text size="sm" fw={500}>
+                {t("app.wordserach")}
+              </Text>
+            </Group>
+            <Searching />
+          </Box>
+        </AppShell.Aside>
+      </AppShell>
+    </AsideContext.Provider>
   );
 }

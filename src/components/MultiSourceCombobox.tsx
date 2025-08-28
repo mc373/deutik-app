@@ -1,144 +1,79 @@
-import React, { useState, useEffect, useRef } from "react";
+import React from "react";
 import { Combobox, TextInput, useCombobox, Input } from "@mantine/core";
 import type { ComboboxItem } from "@mantine/core";
 import { useApp } from "../contexts/AppContext";
 
 interface MultiSourceComboboxProps {
+  // 由父组件直接传已过滤好的单词数组
   wordLists: string[][];
-  maxSuggestions?: number;
-  placeholder?: string;
-  onSelect?: (word: string) => void;
+  loading?: boolean;
+  error?: string | null;
+  // 完全受控
+  inputValue: string;
+  onInputChange: (v: string) => void;
+  onSelect: (word: string) => void;
+  onFocus?: () => void;
 }
 
 const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
   wordLists,
-  maxSuggestions = 10,
+  loading,
+  error,
+  inputValue,
+  onInputChange,
   onSelect,
+  onFocus,
 }) => {
   const combobox = useCombobox({
     onDropdownClose: () => combobox.resetSelectedOption(),
   });
-
-  const comboboxRef = useRef(combobox);
-  useEffect(() => {
-    comboboxRef.current = combobox;
-  }, [combobox]);
-
-  const [inputValue, setInputValue] = useState("");
-  const [filteredWords, setFilteredWords] = useState<ComboboxItem[]>([]);
-  const [activeListIndex, setActiveListIndex] = useState(0);
   const { t } = useApp();
 
-  const toComboboxItems = (words: string[]): ComboboxItem[] =>
-    words.map((word) => ({ value: word, label: word }));
-
-  useEffect(() => {
-    const { resetSelectedOption, closeDropdown, openDropdown } =
-      comboboxRef.current;
-
-    if (inputValue.length === 0) {
-      setFilteredWords([]);
-      resetSelectedOption();
-      closeDropdown();
-      return;
-    }
-
-    const lowerInput = inputValue.toLowerCase();
-    let results: string[] = [];
-    let currentIndex = activeListIndex;
-
-    // 依次搜索各个数组
-    for (let i = 0; i < wordLists.length; i++) {
-      currentIndex = (activeListIndex + i) % wordLists.length;
-      const currentList = wordLists[currentIndex];
-
-      // 修改为 startsWith 匹配单词开头
-      results = currentList
-        .filter((word) => word.toLowerCase().startsWith(lowerInput))
-        .slice(0, maxSuggestions);
-
-      if (results.length > 0) {
-        setActiveListIndex(currentIndex);
-        break;
-      }
-    }
-
-    setFilteredWords(toComboboxItems(results));
-    if (inputValue.length > 0) {
-      openDropdown();
-    }
-  }, [inputValue, wordLists, activeListIndex, maxSuggestions]);
-
-  const handleOptionSubmit = (value: string) => {
-    setInputValue(value);
-    onSelect?.(value);
-    combobox.closeDropdown();
-  };
-
-  // 添加鼠标点击处理函数
-  const handleOptionClick = (value: string) => {
-    setInputValue(value);
-    onSelect?.(value);
-    // 添加延迟关闭，确保点击事件处理完成
-    setTimeout(() => {
-      combobox.closeDropdown();
-    }, 100);
-  };
+  // 远程只给了一个数组，直接拍平即可
+  const suggestions: ComboboxItem[] = wordLists
+    .flat()
+    .map((w) => ({ value: w, label: w }));
 
   return (
     <Combobox
       store={combobox}
-      onOptionSubmit={handleOptionSubmit}
       withinPortal={false}
+      onOptionSubmit={(val) => {
+        onSelect(val);
+        combobox.closeDropdown();
+      }}
     >
       <Combobox.Target>
         <Input.Wrapper>
           <TextInput
             placeholder={t("app.inputword")}
             value={inputValue}
-            onChange={(event) => {
-              setInputValue(event.currentTarget.value);
-              if (event.currentTarget.value.length === 0) {
-                setFilteredWords([]);
-                combobox.closeDropdown();
-              }
+            onChange={(e) => onInputChange(e.currentTarget.value)}
+            onFocus={() => {
+              if (inputValue.length > 0) combobox.openDropdown();
+              onFocus?.();
             }}
-            onClick={() => inputValue.length > 0 && combobox.openDropdown()}
-            onFocus={() => inputValue.length > 0 && combobox.openDropdown()}
-            onBlur={() => {
-              // 添加延迟，避免立即关闭导致点击选项失效
-              setTimeout(() => combobox.closeDropdown(), 200);
-            }}
+            onBlur={() => setTimeout(combobox.closeDropdown, 150)}
           />
         </Input.Wrapper>
       </Combobox.Target>
 
       <Combobox.Dropdown>
         <Combobox.Options>
-          {filteredWords.length > 0 ? (
-            filteredWords.map((item) => (
-              <Combobox.Option
-                value={item.value}
-                key={item.value}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  handleOptionClick(item.value);
-                }}
-              >
+          {loading ? (
+            <Combobox.Empty>{t("app.loading")}</Combobox.Empty>
+          ) : error ? (
+            <Combobox.Empty>{error}</Combobox.Empty>
+          ) : suggestions.length ? (
+            suggestions.map((item) => (
+              <Combobox.Option key={item.value} value={item.value}>
                 {item.label}
               </Combobox.Option>
             ))
+          ) : inputValue.length > 0 ? (
+            <Combobox.Empty>{t("app.wordnomatch")}</Combobox.Empty>
           ) : (
-            <Combobox.Empty>
-              {inputValue.length >= 1
-                ? activeListIndex === wordLists.length - 1
-                  ? t("app.wordnomatch")
-                  : `${t("app.tabseraching")} ${activeListIndex + 1}/${
-                      wordLists.length
-                    }...`
-                : t("app.inputword")}
-            </Combobox.Empty>
+            <Combobox.Empty>{t("app.inputword")}</Combobox.Empty>
           )}
         </Combobox.Options>
       </Combobox.Dropdown>

@@ -199,10 +199,10 @@ export async function retryOperation<T>(
 // 在开发环境中自动运行测试
 if (process.env.NODE_ENV === "development" && typeof window !== "undefined") {
   // 延迟执行，避免影响应用启动
-  setTimeout(() => {
-    console.log("🧪 Running MD5 consistency tests...");
-    testMd5Consistency();
-  }, 2000);
+  // setTimeout(() => {
+  //   console.log("🧪 Running MD5 consistency tests...");
+  //   testMd5Consistency();
+  // }, 2000);
 }
 
 export default {

@@ -11,9 +11,10 @@ import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 
 import Welcome from "./pages/Welcome";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import Home from "./pages/Home";
-
+import { indexedDBService } from "./services/indexedDBService";
+import Demo from "./pages/test";
 // 认证状态加载组件
 function AuthLoading() {
   return (
@@ -24,6 +25,25 @@ function AuthLoading() {
 }
 
 export default function App() {
+  useEffect(() => {
+    // 应用启动时初始化 IndexedDB
+    const initializeDB = async () => {
+      try {
+        await indexedDBService.init();
+        console.log("IndexedDB initialized successfully");
+      } catch (error) {
+        console.error("Failed to initialize IndexedDB:", error);
+      }
+    };
+
+    initializeDB();
+
+    // 应用退出时关闭连接（可选）
+    return () => {
+      indexedDBService.close();
+    };
+  }, []);
+
   return (
     <MantineProvider theme={theme}>
       <Router>
@@ -32,6 +52,7 @@ export default function App() {
             <Route path="/welcome" element={<Welcome />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/test" element={<Demo />} />
             <Route path="/*" element={<Home />} />
             {/* 未匹配路由处理 */}
             <Route path="*" element={<Navigate to="/Home" replace />} />

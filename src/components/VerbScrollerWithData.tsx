@@ -1,8 +1,7 @@
 // components/VerbScrollerWithData.tsx
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import {
   Table,
-  Button,
   Group,
   Slider,
   ActionIcon,
@@ -11,7 +10,6 @@ import {
   Paper,
   Switch,
   Loader,
-  Alert,
   Center,
   Stack,
   Checkbox,
@@ -25,7 +23,6 @@ import {
 import {
   IconPlayerPlay,
   IconPlayerPause,
-  IconRefresh,
   IconInfoCircle,
   IconEye,
   IconEyeOff,
@@ -33,10 +30,11 @@ import {
   IconFilter,
   IconMessageCircle,
 } from "@tabler/icons-react";
-import { useVerbsData, VerbData } from "../hooks/useVerbsData";
+import useVerbsData, { VerbData } from "../hooks/useVerbsData";
 import { useAudioPlayer } from "../hooks/useAudioPlayer";
 import { md5HexPy } from "../utils/audioUtils";
 import { useApp } from "../contexts/AppContext";
+import { AsideContext } from "../pages/Home";
 
 // 转换 API 数据到组件需要的格式
 const transformVerbData = (verb: VerbData, index: number) => ({
@@ -69,6 +67,8 @@ function VerbScroller({
   loop = true,
   height = 400,
 }: VerbScrollerProps) {
+  console.log("VerbScroller render with verbs:", verbs);
+  const { toggle } = useContext(AsideContext);
   const { setCurWord } = useApp();
   const [current, setCurrent] = useState<number>(
     Math.max(0, Math.min(initialIndex, Math.max(0, verbs.length - 1)))
@@ -125,7 +125,6 @@ function VerbScroller({
     } else {
       setFilteredVerbs(verbs.filter((v) => v.cgroup === selectedGroup));
     }
-
     // 重置当前行到第一行
     setCurrent(0);
     currentIndexRef.current = 0;
@@ -338,6 +337,7 @@ function VerbScroller({
   const handleWordInfoClick = (word: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setCurWord(word);
+    toggle();
   };
 
   // 手动显示/隐藏特定形式
@@ -768,17 +768,6 @@ function VerbScroller({
                       style={{ position: "absolute", top: 4, right: 4 }}
                       className="action-icons"
                     >
-                      <Tooltip label="查看词义" withArrow>
-                        <ActionIcon
-                          size="sm"
-                          variant="subtle"
-                          onClick={(e) => handleWordInfoClick(v.infinitiv, e)}
-                          color="blue"
-                          disabled={playing}
-                        >
-                          <IconInfoCircle size={14} />
-                        </ActionIcon>
-                      </Tooltip>
                       {hasComments && (
                         <Popover
                           width={300}
@@ -787,12 +776,12 @@ function VerbScroller({
                           shadow="md"
                         >
                           <Popover.Target>
-                            <Tooltip label="查看备注" withArrow>
+                            <Tooltip label={v.comments} withArrow>
                               <ActionIcon
                                 size="sm"
                                 variant="subtle"
                                 color="green"
-                                disabled={playing}
+                                // disabled={playing}
                               >
                                 <IconMessageCircle size={14} />
                               </ActionIcon>
@@ -803,6 +792,20 @@ function VerbScroller({
                           </Popover.Dropdown>
                         </Popover>
                       )}
+                      <ActionIcon
+                        size="sm"
+                        variant="subtle"
+                        onClick={(e) => {
+                          handleWordInfoClick(v.infinitiv, e);
+                        }}
+                        onMouseEnter={(e) =>
+                          handleWordInfoClick(v.infinitiv, e)
+                        }
+                        color="blue"
+                        // disabled={playing}
+                      >
+                        <IconInfoCircle size={14} />
+                      </ActionIcon>
                     </Group>
                   </td>
                   <td style={{ padding: "12px 8px", textAlign: "center" }}>
@@ -840,7 +843,7 @@ function VerbScroller({
 }
 
 export default function VerbScrollerWithData() {
-  const { data, loading, error, refetch } = useVerbsData();
+  const { data, loading } = useVerbsData();
   const { colorScheme } = useMantineColorScheme();
   const isDark = colorScheme === "dark";
 
@@ -857,60 +860,13 @@ export default function VerbScrollerWithData() {
     );
   }
 
-  if (error) {
-    return (
-      <Alert color="red" title="Error" variant="filled">
-        <Text>Failed to load verbs: {error}</Text>
-        <Button
-          leftSection={<IconRefresh size={16} />}
-          onClick={refetch}
-          mt="md"
-          size="sm"
-        >
-          Retry
-        </Button>
-      </Alert>
-    );
-  }
-
-  if (transformedVerbs.length === 0) {
-    return (
-      <Alert color="yellow" title="No Data" variant="filled">
-        <Text>No verbs data available.</Text>
-        <Button
-          leftSection={<IconRefresh size={16} />}
-          onClick={refetch}
-          mt="md"
-          size="sm"
-        >
-          Retry
-        </Button>
-      </Alert>
-    );
-  }
-
   return (
     <div>
-      <Group justify="space-between" mb="md">
-        <Text size="xl" fw={700} c={isDark ? "gray.1" : "dark"}>
-          German Irregular Verbs
-        </Text>
-        <Button
-          variant="outline"
-          leftSection={<IconRefresh size={16} />}
-          onClick={refetch}
-          size="sm"
-          color={isDark ? "gray" : "blue"}
-        >
-          Refresh
-        </Button>
-      </Group>
-
       <VerbScroller
         verbs={transformedVerbs}
         initialSpeed={4.0}
         initialRowDelay={2.0}
-        height={500}
+        height={400}
       />
     </div>
   );
