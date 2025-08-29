@@ -14,7 +14,7 @@ import Welcome from "./pages/Welcome";
 import { Suspense, useEffect } from "react";
 import Home from "./pages/Home";
 import { indexedDBService } from "./services/indexedDBService";
-import Demo from "./pages/test";
+
 // 认证状态加载组件
 function AuthLoading() {
   return (
@@ -52,7 +52,7 @@ export default function App() {
             <Route path="/welcome" element={<Welcome />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/test" element={<Demo />} />
+
             <Route path="/*" element={<Home />} />
             {/* 未匹配路由处理 */}
             <Route path="*" element={<Navigate to="/Home" replace />} />
