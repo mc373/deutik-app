@@ -1,14 +1,13 @@
 import {
   AppShell,
   Group,
-  Button,
   ActionIcon,
   Box,
   useMantineColorScheme,
 } from "@mantine/core";
 import { UserButton, useClerk } from "@clerk/clerk-react";
 import { useMemo } from "react";
-import { IconSun, IconMoon, IconSearch } from "@tabler/icons-react";
+import { IconSun, IconMoon, IconSearch, IconLogin } from "@tabler/icons-react";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import { GridMenu } from "../components/GridMenu";
 import Searching from "./Searching";
@@ -25,26 +24,27 @@ export default function Home() {
   const { user } = useClerk();
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
   const { t, modal } = useApp();
+  const isMobile = useMediaQuery("(max-width: 768px)", false);
+  const isSmallMobile = useMediaQuery("(max-width: 480px)", false);
 
   const MemoizedGridMenu = React.memo(GridMenu);
   const MemoizedLearning = React.memo(Learning);
   const MemoizedUnregelverb = React.memo(Unregelverb);
   const MemoizedVocabulary = React.memo(Vocabulary);
-  const MemoizedPronunciation = React.memo(Pronunciation); // 空依赖数组，确保只创建一次
-  const isMobile = useMediaQuery("(max-width: 768px)", false);
-  // 使用 useMemo 记忆化整个路由部分
+  const MemoizedPronunciation = React.memo(Pronunciation);
+
   return (
     <AppShell
-      header={{ height: 60 }}
+      header={{ height: isMobile ? 70 : 60 }}
       aside={{
         width: 300,
         breakpoint: "sm",
         collapsed: { mobile: !modal.opened, desktop: false },
       }}
-      padding="md"
+      padding="1px"
     >
       <AppShell.Header
-        p="md"
+        p={isMobile ? "sm" : "md"}
         bg={colorScheme === "dark" ? "dark.7" : "white"}
         style={{
           borderBottom:
@@ -53,8 +53,9 @@ export default function Home() {
               : "1px solid var(--mantine-color-gray-2)",
         }}
       >
-        <Group justify="space-between" h="100%">
-          <Group>
+        <Group justify="space-between" h="100%" wrap="nowrap" gap="xs">
+          {/* 左侧内容 */}
+          <Group gap="xs" wrap="nowrap">
             <img
               src={
                 colorScheme === "dark"
@@ -63,100 +64,88 @@ export default function Home() {
               }
               alt="Deutik Logo"
               style={{
-                width: "80px",
-                height: "20px",
+                width: isSmallMobile ? "60px" : "80px",
+                height: isSmallMobile ? "15px" : "20px",
+                flexShrink: 0,
               }}
             />
+
             {isMobile && (
               <ActionIcon
                 variant="subtle"
-                size="lg"
+                size={isSmallMobile ? "md" : "lg"}
                 onClick={modal.toggle}
                 aria-label="查询单词"
                 c={colorScheme === "dark" ? "gray.2" : "dark.7"}
+                style={{ flexShrink: 0 }}
               >
-                <IconSearch size={20} />
+                <IconSearch size={isSmallMobile ? 16 : 20} />
               </ActionIcon>
             )}
-
-            {/* <Group gap="sm" visibleFrom="sm">
-              <Button
-                variant="subtle"
-                size="sm"
-                component="a"
-                href="/"
-                c={colorScheme === "dark" ? "gray.2" : "dark.7"}
-              >
-                {t("app.home")}
-              </Button>
-            </Group> */}
           </Group>
 
-          <Group gap="sm">
+          {/* 右侧内容 */}
+          <Group gap={isSmallMobile ? "xs" : "sm"} wrap="nowrap">
             <ActionIcon
               variant="subtle"
-              size="lg"
+              size={isSmallMobile ? "md" : "lg"}
               onClick={toggleColorScheme}
               aria-label="切换主题"
               c={colorScheme === "dark" ? "gray.2" : "dark.7"}
+              style={{ flexShrink: 0 }}
             >
               {colorScheme === "dark" ? (
-                <IconSun size={20} />
+                <IconSun size={isSmallMobile ? 16 : 20} />
               ) : (
-                <IconMoon size={20} />
+                <IconMoon size={isSmallMobile ? 16 : 20} />
               )}
             </ActionIcon>
 
-            <LanguageSwitcher />
+            <Box style={{ flexShrink: 0 }}>
+              <LanguageSwitcher compact={isSmallMobile} />
+            </Box>
 
             {user ? (
-              <UserButton />
+              <Box style={{ flexShrink: 0 }}>
+                <UserButton />
+              </Box>
             ) : (
-              <Button
+              <ActionIcon
                 variant="filled"
-                size="sm"
+                size={isSmallMobile ? "md" : "lg"}
                 onClick={() => {
                   /* 触发登录 */
                 }}
+                color="blue"
+                aria-label={t("app.login") || "Login"}
+                style={{ flexShrink: 0 }}
               >
-                {t("app.login")}
-              </Button>
+                <IconLogin size={isSmallMobile ? 16 : 18} />
+              </ActionIcon>
             )}
           </Group>
         </Group>
       </AppShell.Header>
 
       <AppShell.Main bg={colorScheme === "dark" ? "dark.8" : "gray.0"}>
-        <Box
-          p="xl"
-          bg={colorScheme === "dark" ? "dark.6" : "white"}
-          style={{
-            borderRadius: "var(--mantine-radius-lg)",
-            minHeight: "100%",
-          }}
-        >
-          <Routes>
-            {useMemo(
-              () => (
-                <>
-                  <Route path="/" element={<MemoizedGridMenu />} />
-                  <Route path="/learn" element={<MemoizedLearning />} />
-                  <Route
-                    path="/unregelverb"
-                    element={<MemoizedUnregelverb />}
-                  />
-                  <Route path="/vocabulary" element={<MemoizedVocabulary />} />
-                  <Route
-                    path="/pronunciation"
-                    element={<MemoizedPronunciation />}
-                  />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </>
-              ),
-              []
-            )}
-          </Routes>
-        </Box>
+        <Routes>
+          {useMemo(
+            () => (
+              <>
+                <Route path="/" element={<MemoizedGridMenu />} />
+                <Route path="/learn" element={<MemoizedLearning />} />
+                <Route path="/unregelverb" element={<MemoizedUnregelverb />} />
+                <Route path="/vocabulary" element={<MemoizedVocabulary />} />
+                <Route
+                  path="/pronunciation"
+                  element={<MemoizedPronunciation />}
+                />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </>
+            ),
+            []
+          )}
+        </Routes>
       </AppShell.Main>
 
       <AppShell.Aside

@@ -1,5 +1,5 @@
 // components/VerbScrollerWithData.tsx
-import {  useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Table,
   Group,
@@ -66,8 +66,6 @@ function VerbScroller({
   loop = true,
   height = 400,
 }: VerbScrollerProps) {
-  
-
   const { setCurWord, modal } = useApp();
   const [current, setCurrent] = useState<number>(
     Math.max(0, Math.min(initialIndex, Math.max(0, verbs.length - 1)))
