@@ -108,7 +108,7 @@ const GermanWordDisplay: React.FC<GermanWordDisplayProps> = ({
 
     try {
       const response = await fetch(
-        `http://app.deutik.com/words/${encodeURIComponent(word)}`,
+        `https://app.deutik.com/words/${encodeURIComponent(word)}`,
         {
           headers: { Accept: "application/json" },
           signal: AbortSignal.timeout(10000),
