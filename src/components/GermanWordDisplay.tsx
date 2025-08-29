@@ -39,7 +39,7 @@ interface WordMeaning {
   definitions: TranslationSet;
 }
 
-interface WordEntry {
+export interface WordEntry {
   lemma: string;
   plural: string | null;
   gender: string | null;
@@ -338,7 +338,7 @@ const GermanWordDisplay: React.FC<GermanWordDisplayProps> = ({
                 >
                   <IconChevronDown
                     size={12}
-                    color={isDark ? "gray.4" : "dark"}
+                    color={isDark ? "gray" : "gray"}
                     style={{
                       transform: expandedItems.has(index)
                         ? "rotate(180deg)"
@@ -410,50 +410,50 @@ const GermanWordDisplay: React.FC<GermanWordDisplayProps> = ({
     );
   }
 
-  if (error) {
-    return (
-      <Box p="sm" bg={isDark ? "dark.6" : "white"}>
-        <Alert
-          icon={<IconInfoCircle size={14} />}
-          color="red"
-          variant="light"
-          p="sm"
-        >
-          <Text size="sm" c={isDark ? "dark" : "dark"}>
-            {error}
-          </Text>
-          <Button
-            leftSection={<IconRefresh size={12} />}
-            onClick={fetchWordData}
-            size="xs"
-            mt="sm"
-            color={isDark ? "gray" : "blue"}
-          >
-            {t("app.retry") || "重试"}
-          </Button>
-        </Alert>
-      </Box>
-    );
-  }
+  // if (error) {
+  //   return (
+  //     <Box p="sm" bg={isDark ? "dark.6" : "white"}>
+  //       <Alert
+  //         icon={<IconInfoCircle size={14} />}
+  //         color="red"
+  //         variant="light"
+  //         p="sm"
+  //       >
+  //         <Text size="sm" c={isDark ? "dark" : "dark"}>
+  //           {error}
+  //         </Text>
+  //         <Button
+  //           leftSection={<IconRefresh size={12} />}
+  //           onClick={fetchWordData}
+  //           size="xs"
+  //           mt="sm"
+  //           color={isDark ? "gray" : "blue"}
+  //         >
+  //           {t("app.retry") || "重试"}
+  //         </Button>
+  //       </Alert>
+  //     </Box>
+  //   );
+  // }
 
-  if (!wordData) {
-    return (
-      <Box p="sm" bg={isDark ? "dark.6" : "white"} ta="center">
-        <Text size="sm" c={isDark ? "gray.4" : "dimmed"}>
-          {t("word.notFound") || "未找到单词数据"}
-        </Text>
-        <Button
-          leftSection={<IconRefresh size={12} />}
-          onClick={fetchWordData}
-          size="xs"
-          mt="sm"
-          color={isDark ? "gray" : "blue"}
-        >
-          {t("app.retry") || "重试"}
-        </Button>
-      </Box>
-    );
-  }
+  // if (!wordData) {
+  //   return (
+  //     <Box p="sm" bg={isDark ? "dark.6" : "white"} ta="center">
+  //       <Text size="sm" c={isDark ? "gray.4" : "dimmed"}>
+  //         {t("word.notFound") || "未找到单词数据"}
+  //       </Text>
+  //       <Button
+  //         leftSection={<IconRefresh size={12} />}
+  //         onClick={fetchWordData}
+  //         size="xs"
+  //         mt="sm"
+  //         color={isDark ? "gray" : "blue"}
+  //       >
+  //         {t("app.retry") || "重试"}
+  //       </Button>
+  //     </Box>
+  //   );
+  // }
 
   return (
     <ScrollArea

@@ -27,7 +27,7 @@ const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
   const combobox = useCombobox({
     onDropdownClose: () => combobox.resetSelectedOption(),
   });
-  const { t } = useApp();
+  const { t, setCurWord } = useApp();
 
   // 远程只给了一个数组，直接拍平即可
   const suggestions: ComboboxItem[] = wordLists
@@ -48,12 +48,21 @@ const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
           <TextInput
             placeholder={t("app.inputword")}
             value={inputValue}
-            onChange={(e) => onInputChange(e.currentTarget.value)}
+            onChange={(e) => {
+              const value = e.currentTarget.value;
+              onInputChange(value);
+              // 输入时自动打开下拉框
+              if (value.length > 0) {
+                combobox.openDropdown();
+              } else {
+                combobox.closeDropdown();
+              }
+            }}
             onFocus={() => {
               if (inputValue.length > 0) combobox.openDropdown();
               onFocus?.();
             }}
-            onBlur={() => setTimeout(combobox.closeDropdown, 150)}
+            onBlur={() => setTimeout(() => combobox.closeDropdown(), 150)}
           />
         </Input.Wrapper>
       </Combobox.Target>

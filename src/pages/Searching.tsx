@@ -1,18 +1,12 @@
 import React, { useState } from "react";
 import { useAutocomplete } from "../hooks/useAutocomplete";
 import MultiSourceCombobox from "../components/MultiSourceCombobox";
-import GermanWordDisplay from "../components/GermanWordDisplay";
+import GermanWordDisplay, { WordEntry } from "../components/GermanWordDisplay";
 import { useApp } from "../contexts/AppContext";
 
-interface WordData {
-  word: string;
-  // 其余字段根据后端实际结构补充
-  [key: string]: any;
-}
-
 const Searching: React.FC = () => {
-  const { state } = useApp();
-  const [curWordData, setCurWordData] = useState<WordData | null>(null);
+  const { state, setCurWord } = useApp();
+  const [wordData, setWordData] = useState<WordEntry | undefined>(undefined); // 改为 undefined
 
   /* ---------- 远程自动补全 Hook ---------- */
   const {
@@ -26,16 +20,20 @@ const Searching: React.FC = () => {
 
   /* ---------- 选中词条后拉详情 ---------- */
   const handleSelect = async (lemma: string) => {
+    setInputValue(lemma);
+    setCurWord(lemma);
+
     try {
       const res = await fetch(
         `https://app.deutik.com/api/word/${encodeURIComponent(lemma)}`
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data: WordData = await res.json();
-      setCurWordData(data);
+
+      const data: WordEntry = await res.json();
+      console.log("Word detail:", data);
     } catch (err) {
       console.error("Failed to fetch word detail:", err);
-      setCurWordData(null);
+      setWordData(undefined); // 改为 undefined
     }
   };
 
@@ -54,7 +52,7 @@ const Searching: React.FC = () => {
       </div>
 
       <GermanWordDisplay
-        word={curWordData?.word || state.curWord}
+        word={state.curWord}
         onError={(msg) => console.error(msg)}
       />
     </div>

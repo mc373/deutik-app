@@ -1,5 +1,5 @@
 // components/VerbScrollerWithData.tsx
-import { useContext, useEffect, useRef, useState } from "react";
+import {  useEffect, useRef, useState } from "react";
 import {
   Table,
   Group,
@@ -34,7 +34,6 @@ import useVerbsData, { VerbData } from "../hooks/useVerbsData";
 import { useAudioPlayer } from "../hooks/useAudioPlayer";
 import { md5HexPy } from "../utils/audioUtils";
 import { useApp } from "../contexts/AppContext";
-import { AsideContext } from "../pages/Home";
 
 // 转换 API 数据到组件需要的格式
 const transformVerbData = (verb: VerbData, index: number) => ({
@@ -67,9 +66,9 @@ function VerbScroller({
   loop = true,
   height = 400,
 }: VerbScrollerProps) {
-  console.log("VerbScroller render with verbs:", verbs);
-  const { toggle } = useContext(AsideContext);
-  const { setCurWord } = useApp();
+  
+
+  const { setCurWord, modal } = useApp();
   const [current, setCurrent] = useState<number>(
     Math.max(0, Math.min(initialIndex, Math.max(0, verbs.length - 1)))
   );
@@ -337,7 +336,7 @@ function VerbScroller({
   const handleWordInfoClick = (word: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setCurWord(word);
-    toggle();
+    modal.open();
   };
 
   // 手动显示/隐藏特定形式

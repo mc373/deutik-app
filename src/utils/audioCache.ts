@@ -2,22 +2,24 @@
 import { AudioCacheItem } from "../types/audio";
 
 export class AudioCache {
-  private dbName: string = "GermanVerbsAudioCache";
-  private storeName: string = "audioFiles";
-  private db: IDBDatabase | null = null;
+  private readonly dbName = "GermanVerbsAudioCache";
+  private readonly storeName = "audioFiles";
+  private db: IDBDatabase | null = null; // 允许 null，并赋初值
 
-  async initDB(): Promise<IDBDatabase> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, 1);
+  /* ---------- 私有：确保数据库已打开 ---------- */
+  private async ensureDB(): Promise<IDBDatabase> {
+    if (this.db) return this.db;
 
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        this.db = request.result;
+    return new Promise<IDBDatabase>((resolve, reject) => {
+      const openReq = indexedDB.open(this.dbName, 1);
+
+      openReq.onerror = () => reject(openReq.error);
+      openReq.onsuccess = () => {
+        this.db = openReq.result;
         resolve(this.db);
       };
-
-      request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
-        const db = (event.target as IDBOpenDBRequest).result;
+      openReq.onupgradeneeded = (e: IDBVersionChangeEvent) => {
+        const db = (e.target as IDBOpenDBRequest).result;
         if (!db.objectStoreNames.contains(this.storeName)) {
           const store = db.createObjectStore(this.storeName, {
             keyPath: "hash",
@@ -29,96 +31,62 @@ export class AudioCache {
     });
   }
 
+  /* ---------- 公开 API ---------- */
   async getAudio(hash: string): Promise<string | null> {
-    if (!this.db) await this.initDB();
+    const db = await this.ensureDB();
+    return new Promise<string | null>((resolve, reject) => {
+      const tx = db.transaction(this.storeName, "readonly");
+      const store = tx.objectStore(this.storeName);
+      const req = store.get(hash);
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.storeName], "readonly");
-      const store = transaction.objectStore(this.storeName);
-      const request = store.get(hash);
-
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        if (request.result) {
-          // 更新最后访问时间
-          this.updateLastAccessed(hash);
-          const audioURL = URL.createObjectURL(request.result.audioBlob);
-          resolve(audioURL);
-        } else {
-          resolve(null);
-        }
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        if (!req.result) return resolve(null);
+        // 异步更新最后访问时间，无返回值
+        this.updateLastAccessed(hash);
+        resolve(URL.createObjectURL(req.result.audioBlob));
       };
     });
   }
 
   async saveAudio(hash: string, audioBlob: Blob): Promise<void> {
-    if (!this.db) await this.initDB();
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.storeName], "readwrite");
-      const store = transaction.objectStore(this.storeName);
+    const db = await this.ensureDB();
+    return new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(this.storeName, "readwrite");
+      const store = tx.objectStore(this.storeName);
       const item: AudioCacheItem = {
         hash,
         audioBlob,
         createdAt: Date.now(),
         lastAccessed: Date.now(),
       };
-      const request = store.put(item);
-
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve();
-    });
-  }
-
-  private async updateLastAccessed(hash: string): Promise<void> {
-    if (!this.db) return;
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.storeName], "readwrite");
-      const store = transaction.objectStore(this.storeName);
-      const getRequest = store.get(hash);
-
-      getRequest.onerror = () => reject(getRequest.error);
-      getRequest.onsuccess = () => {
-        if (getRequest.result) {
-          const item: AudioCacheItem = {
-            ...getRequest.result,
-            lastAccessed: Date.now(),
-          };
-          const putRequest = store.put(item);
-          putRequest.onerror = () => reject(putRequest.error);
-          putRequest.onsuccess = () => resolve();
-        }
-      };
+      const req = store.put(item);
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => resolve();
     });
   }
 
   async preloadAudios(hashes: string[]): Promise<Record<string, string>> {
     const results: Record<string, string> = {};
-    for (const hash of hashes) {
-      const cachedAudio = await this.getAudio(hash);
-      if (cachedAudio) {
-        results[hash] = cachedAudio;
-      }
+    for (const h of hashes) {
+      const url = await this.getAudio(h);
+      if (url) results[h] = url;
     }
     return results;
   }
 
-  async cleanupOldAudios(
-    maxAge: number = 30 * 24 * 60 * 60 * 1000
-  ): Promise<void> {
-    if (!this.db) await this.initDB();
-
-    return new Promise((resolve, reject) => {
-      const transaction = this.db!.transaction([this.storeName], "readwrite");
-      const store = transaction.objectStore(this.storeName);
-      const index = store.index("lastAccessed");
+  async cleanupOldAudios(maxAge = 30 * 24 * 60 * 60 * 1000): Promise<void> {
+    const db = await this.ensureDB();
+    return new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(this.storeName, "readwrite");
+      const store = tx.objectStore(this.storeName);
+      const idx = store.index("lastAccessed");
       const cutoff = Date.now() - maxAge;
-      const request = index.openCursor(IDBKeyRange.upperBound(cutoff));
+      const cursorReq = idx.openCursor(IDBKeyRange.upperBound(cutoff));
 
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        const cursor = request.result;
+      cursorReq.onerror = () => reject(cursorReq.error);
+      cursorReq.onsuccess = () => {
+        const cursor = cursorReq.result;
         if (cursor) {
           cursor.delete();
           cursor.continue();
@@ -128,6 +96,30 @@ export class AudioCache {
       };
     });
   }
+
+  /* 关闭连接（如应用卸载时） */
+  close(): void {
+    this.db?.close();
+    this.db = null;
+  }
+
+  /* ---------- 私有：更新 lastAccessed ---------- */
+  private async updateLastAccessed(hash: string): Promise<void> {
+    if (!this.db) return;
+    const tx = this.db.transaction(this.storeName, "readwrite");
+    const store = tx.objectStore(this.storeName);
+    const req = store.get(hash);
+    req.onsuccess = () => {
+      if (req.result) {
+        const item: AudioCacheItem = {
+          ...req.result,
+          lastAccessed: Date.now(),
+        };
+        store.put(item);
+      }
+    };
+  }
 }
 
+// 单例导出，全局共用
 export const audioCache = new AudioCache();

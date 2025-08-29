@@ -29,7 +29,7 @@ export const useAutocomplete = (apiUrl: string): UseAutocompleteReturn => {
     const { signal } = controller;
 
     const fetchSuggestions = async (): Promise<void> => {
-      if (inputValue.trim().length < 2) {
+      if (inputValue.trim().length < 1) {
         setSuggestions([]);
         setError(null);
         return;
