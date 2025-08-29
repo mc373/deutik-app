@@ -12,14 +12,9 @@ import {
   Button,
   Paper,
   ScrollArea,
-  Alert,
   useMantineColorScheme,
 } from "@mantine/core";
-import {
-  IconRefresh,
-  IconChevronDown,
-  IconInfoCircle,
-} from "@tabler/icons-react";
+import { IconChevronDown } from "@tabler/icons-react";
 import { useApp } from "../contexts/AppContext";
 
 interface TranslationSet {
@@ -410,31 +405,31 @@ const GermanWordDisplay: React.FC<GermanWordDisplayProps> = ({
     );
   }
 
-  // if (error) {
-  //   return (
-  //     <Box p="sm" bg={isDark ? "dark.6" : "white"}>
-  //       <Alert
-  //         icon={<IconInfoCircle size={14} />}
-  //         color="red"
-  //         variant="light"
-  //         p="sm"
-  //       >
-  //         <Text size="sm" c={isDark ? "dark" : "dark"}>
-  //           {error}
-  //         </Text>
-  //         <Button
-  //           leftSection={<IconRefresh size={12} />}
-  //           onClick={fetchWordData}
-  //           size="xs"
-  //           mt="sm"
-  //           color={isDark ? "gray" : "blue"}
-  //         >
-  //           {t("app.retry") || "重试"}
-  //         </Button>
-  //       </Alert>
-  //     </Box>
-  //   );
-  // }
+  if (error) {
+    return (
+      <Box p="sm" bg={isDark ? "dark.6" : "white"}>
+        {/* <Alert
+          icon={<IconInfoCircle size={14} />}
+          color="red"
+          variant="light"
+          p="sm"
+        >
+          <Text size="sm" c={isDark ? "dark" : "dark"}>
+            {error}
+          </Text>
+          <Button
+            leftSection={<IconRefresh size={12} />}
+            onClick={fetchWordData}
+            size="xs"
+            mt="sm"
+            color={isDark ? "gray" : "blue"}
+          >
+            {t("app.retry") || "重试"}
+          </Button>
+        </Alert> */}
+      </Box>
+    );
+  }
 
   // if (!wordData) {
   //   return (

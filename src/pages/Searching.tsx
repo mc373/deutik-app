@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { useAutocomplete } from "../hooks/useAutocomplete";
 import MultiSourceCombobox from "../components/MultiSourceCombobox";
 import GermanWordDisplay, { WordEntry } from "../components/GermanWordDisplay";
@@ -6,7 +6,6 @@ import { useApp } from "../contexts/AppContext";
 
 const Searching: React.FC = () => {
   const { state, setCurWord } = useApp();
-  const [wordData, setWordData] = useState<WordEntry | undefined>(undefined); // 改为 undefined
 
   /* ---------- 远程自动补全 Hook ---------- */
   const {
@@ -33,7 +32,6 @@ const Searching: React.FC = () => {
       console.log("Word detail:", data);
     } catch (err) {
       console.error("Failed to fetch word detail:", err);
-      setWordData(undefined); // 改为 undefined
     }
   };
 

@@ -27,7 +27,7 @@ const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
   const combobox = useCombobox({
     onDropdownClose: () => combobox.resetSelectedOption(),
   });
-  const { t, setCurWord } = useApp();
+  const { t } = useApp();
 
   // 远程只给了一个数组，直接拍平即可
   const suggestions: ComboboxItem[] = wordLists
