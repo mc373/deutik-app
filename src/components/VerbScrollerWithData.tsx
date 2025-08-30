@@ -845,7 +845,21 @@ export default function VerbScrollerWithData() {
   const isDark = colorScheme === "dark";
 
   const transformedVerbs = data.map(transformVerbData);
+  // 直接使用窗口高度计算（假设父容器是满屏的）
+  const calculateHeight = () => {
+    return window.innerHeight - 145; // 减去预估的头部和边距
+  };
+  // alert(window.innerHeight);
+  const [containerHeight, setContainerHeight] = useState(calculateHeight);
 
+  useEffect(() => {
+    const handleResize = () => {
+      setContainerHeight(calculateHeight());
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
   if (loading) {
     return (
       <Center style={{ height: 400 }}>
@@ -863,7 +877,7 @@ export default function VerbScrollerWithData() {
         verbs={transformedVerbs}
         initialSpeed={4.0}
         initialRowDelay={2.0}
-        height={400}
+        height={containerHeight}
       />
     </div>
   );

@@ -15,9 +15,9 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
   const isMobile = useMediaQuery("(max-width: 768px)");
 
   // 获取当前语言的完整信息
-  const currentLangInfo = availableLanguages.find(
-    (lang) => lang.code === currentLanguage
-  );
+  // const currentLangInfo = availableLanguages.find(
+  //   (lang) => lang.code === currentLanguage
+  // );
 
   const getLanguageCode = (code: string) => {
     return code.toUpperCase();
@@ -41,11 +41,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
             size="md"
             aria-label={t("app.changeLanguage") || "Change language"}
           >
-            <Text
-              fw={500}
-              size="sm"
-              style={{ fontFamily: "monospace", letterSpacing: "0.5px" }}
-            >
+            <Text fw={500} size="sm" style={{ fontFamily: "monospace" }}>
               {getLanguageCode(currentLanguage)}
             </Text>
           </ActionIcon>
@@ -112,7 +108,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
               {getLanguageCode(currentLanguage)}
             </Text>
             <Text fw={500} size="sm">
-              {currentLangInfo?.nativeName || currentLanguage.toUpperCase()}
+              {currentLanguage.toUpperCase()}
             </Text>
             <IconChevronDown size={14} />
           </Group>

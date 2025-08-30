@@ -1,5 +1,15 @@
 import axios from "axios";
-import { indexedDBService } from "../services/indexedDBService";
+
+// 内存缓存
+interface CacheItem {
+  data: VerbData[];
+  lastUpdated: string;
+  cacheTtl: number;
+}
+
+const memoryCache = new Map<string, CacheItem>();
+const CACHE_KEY = "verbs_data";
+
 // 从网络获取数据
 export const fetchVerbsFromNetwork = async (): Promise<{
   data: VerbData[];
@@ -55,17 +65,15 @@ export interface VerbsResponse {
   data: VerbData[];
 }
 
-const CACHE_KEY = "verbs_data";
-
-// 获取数据（优先使用缓存）
+// 获取数据（优先使用内存缓存）
 export const getVerbsData = async (): Promise<{
-  data: any[];
+  data: VerbData[];
   fromCache: boolean;
   error?: string;
 }> => {
   try {
-    // 首先尝试从缓存获取
-    const cachedData = await indexedDBService.getData("verbs", CACHE_KEY);
+    // 首先尝试从内存缓存获取
+    const cachedData = memoryCache.get(CACHE_KEY);
 
     if (
       cachedData &&
@@ -80,8 +88,8 @@ export const getVerbsData = async (): Promise<{
     // 缓存无效或不存在，从网络获取
     const networkData = await fetchVerbsFromNetwork();
 
-    // 保存到缓存
-    await indexedDBService.setData("verbs", CACHE_KEY, {
+    // 保存到内存缓存
+    memoryCache.set(CACHE_KEY, {
       data: networkData.data,
       lastUpdated: networkData.lastUpdated,
       cacheTtl: networkData.cacheTtl,
@@ -93,7 +101,7 @@ export const getVerbsData = async (): Promise<{
     };
   } catch (error) {
     // 网络请求失败，尝试使用缓存数据（即使可能过期）
-    const cachedData = await indexedDBService.getData("verbs", CACHE_KEY);
+    const cachedData = memoryCache.get(CACHE_KEY);
     if (cachedData) {
       return {
         data: cachedData.data,
@@ -110,10 +118,11 @@ export const getVerbsData = async (): Promise<{
 };
 
 // 强制刷新数据
-export const refreshVerbsData = async (): Promise<any[]> => {
+export const refreshVerbsData = async (): Promise<VerbData[]> => {
   const networkData = await fetchVerbsFromNetwork();
 
-  await indexedDBService.setData("verbs", CACHE_KEY, {
+  // 更新内存缓存
+  memoryCache.set(CACHE_KEY, {
     data: networkData.data,
     lastUpdated: networkData.lastUpdated,
     cacheTtl: networkData.cacheTtl,
@@ -123,8 +132,28 @@ export const refreshVerbsData = async (): Promise<any[]> => {
 };
 
 // 清空缓存
-export const clearVerbsCache = async (): Promise<void> => {
-  await indexedDBService.deleteData("verbs", CACHE_KEY);
+export const clearVerbsCache = (): void => {
+  memoryCache.delete(CACHE_KEY);
+};
+
+// 获取缓存信息（用于调试）
+export const getCacheInfo = (): {
+  hasCache: boolean;
+  lastUpdated?: string;
+  isValid?: boolean;
+  size: number;
+} => {
+  const cachedData = memoryCache.get(CACHE_KEY);
+  if (!cachedData) {
+    return { hasCache: false, size: memoryCache.size };
+  }
+
+  return {
+    hasCache: true,
+    lastUpdated: cachedData.lastUpdated,
+    isValid: isCacheValid(cachedData.lastUpdated, cachedData.cacheTtl),
+    size: memoryCache.size,
+  };
 };
 
 // 检查缓存是否有效
@@ -133,3 +162,15 @@ const isCacheValid = (lastUpdated: string, cacheTtl: number): boolean => {
   const currentTime = Date.now();
   return currentTime - lastUpdatedTime < cacheTtl * 1000;
 };
+
+// 可选：添加自动清理过期缓存的机制
+const cleanupExpiredCache = (): void => {
+  for (const [key, item] of memoryCache.entries()) {
+    if (!isCacheValid(item.lastUpdated, item.cacheTtl)) {
+      memoryCache.delete(key);
+    }
+  }
+};
+
+// 每隔5分钟清理一次过期缓存
+setInterval(cleanupExpiredCache, 5 * 60 * 1000);

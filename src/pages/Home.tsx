@@ -7,18 +7,24 @@ import {
 } from "@mantine/core";
 import { UserButton, useClerk } from "@clerk/clerk-react";
 import { useMemo } from "react";
-import { IconSun, IconMoon, IconSearch, IconLogin } from "@tabler/icons-react";
+import {
+  IconSun,
+  IconMoon,
+  IconSearch,
+  IconUserFilled,
+} from "@tabler/icons-react";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import { GridMenu } from "../components/GridMenu";
 import Searching from "./Searching";
 import Learning from "./Learning";
-import Unregelverb from "./Unregelverb";
+// import Unregelverb from "./Unregelverb";
 import Vocabulary from "./Vocabulary";
 import { useMediaQuery } from "@mantine/hooks";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Pronunciation from "./Pronunciation";
 import { useApp } from "../contexts/AppContext";
 import React from "react";
+import VerbScrollerWithData from "../components/VerbScrollerWithData";
 
 export default function Home() {
   const { user } = useClerk();
@@ -29,7 +35,7 @@ export default function Home() {
 
   const MemoizedGridMenu = React.memo(GridMenu);
   const MemoizedLearning = React.memo(Learning);
-  const MemoizedUnregelverb = React.memo(Unregelverb);
+  const MemoizedUnregelverb = React.memo(VerbScrollerWithData);
   const MemoizedVocabulary = React.memo(Vocabulary);
   const MemoizedPronunciation = React.memo(Pronunciation);
 
@@ -37,7 +43,7 @@ export default function Home() {
     <AppShell
       header={{ height: isMobile ? 70 : 60 }}
       aside={{
-        width: 300,
+        width: 400,
         breakpoint: "sm",
         collapsed: { mobile: !modal.opened, desktop: false },
       }}
@@ -118,7 +124,7 @@ export default function Home() {
                 aria-label={t("app.login") || "Login"}
                 style={{ flexShrink: 0 }}
               >
-                <IconLogin size={isSmallMobile ? 16 : 18} />
+                <IconUserFilled size={isSmallMobile ? 16 : 18} />
               </ActionIcon>
             )}
           </Group>
@@ -147,7 +153,6 @@ export default function Home() {
       </AppShell.Main>
 
       <AppShell.Aside
-        p="md"
         bg={colorScheme === "dark" ? "dark.7" : "white"}
         style={{
           borderLeft:

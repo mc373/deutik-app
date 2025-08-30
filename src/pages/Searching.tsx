@@ -37,7 +37,13 @@ const Searching: React.FC = () => {
 
   return (
     <div>
-      <div style={{ maxWidth: 400, margin: "0 auto", padding: 20 }}>
+      <div
+        style={{
+          maxWidth: 400,
+          margin: "0 auto",
+          padding: "20px 25px 20px 12px",
+        }}
+      >
         <MultiSourceCombobox
           wordLists={[suggestions]}
           loading={isLoading}

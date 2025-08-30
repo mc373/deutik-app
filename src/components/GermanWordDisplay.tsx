@@ -84,9 +84,7 @@ const GermanWordDisplay: React.FC<GermanWordDisplayProps> = ({
   // 监听窗口大小变化，动态计算高度
   useEffect(() => {
     const updateHeight = () => {
-      const headerHeight = 60; // Header高度
-      const padding = 30; // 内边距
-      const calculatedHeight = `calc(100vh - ${headerHeight + 5 * padding}px)`;
+      const calculatedHeight = `calc(100vh - ${130}px)`;
       setContainerHeight(calculatedHeight);
     };
 
