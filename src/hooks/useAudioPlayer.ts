@@ -30,7 +30,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
         }
 
         // 从 Cloudflare R2 下载
-        const response = await fetch(`http://app.deutik.com/audio/${hash}.mp3`);
+        const response = await fetch(
+          `https://app.deutik.com/audio/${hash}.mp3`
+        );
 
         if (!response.ok) {
           throw new Error(`Audio not found for hash: ${hash}`);

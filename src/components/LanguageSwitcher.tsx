@@ -19,15 +19,8 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
     (lang) => lang.code === currentLanguage
   );
 
-  const getLanguageFlag = (code: string) => {
-    const flags = {
-      en: "🇺🇸",
-      de: "🇩🇪",
-      zh: "🇨🇳",
-      tr: "🇹🇷",
-      ar: "🇸🇦",
-    };
-    return flags[code as keyof typeof flags] || "🌐";
+  const getLanguageCode = (code: string) => {
+    return code.toUpperCase();
   };
 
   // 在移动设备上，将下拉菜单位置调整为左侧
@@ -39,8 +32,8 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
         shadow="md"
         width={140}
         position={menuPosition}
-        withinPortal={true} // 确保在下拉菜单中使用 portal
-        zIndex={10000} // 设置较高的 z-index
+        withinPortal={true}
+        zIndex={10000}
       >
         <Menu.Target>
           <ActionIcon
@@ -48,8 +41,12 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
             size="md"
             aria-label={t("app.changeLanguage") || "Change language"}
           >
-            <Text fw={500} size="sm">
-              {getLanguageFlag(currentLanguage)}
+            <Text
+              fw={500}
+              size="sm"
+              style={{ fontFamily: "monospace", letterSpacing: "0.5px" }}
+            >
+              {getLanguageCode(currentLanguage)}
             </Text>
           </ActionIcon>
         </Menu.Target>
@@ -65,7 +62,18 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
               }}
             >
               <Group gap="sm">
-                <Text size="sm">{getLanguageFlag(lang.code)}</Text>
+                <Text
+                  size="sm"
+                  style={{
+                    fontFamily: "monospace",
+                    minWidth: "24px",
+                    textAlign: "center",
+                    fontWeight: 600,
+                    letterSpacing: "0.5px",
+                  }}
+                >
+                  {getLanguageCode(lang.code)}
+                </Text>
                 <Text size="sm">{lang.nativeName}</Text>
               </Group>
             </Menu.Item>
@@ -78,10 +86,10 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
   return (
     <Menu
       shadow="md"
-      width={160}
+      width={180}
       position={menuPosition}
-      withinPortal={true} // 确保在下拉菜单中使用 portal
-      zIndex={10000} // 设置较高的 z-index
+      withinPortal={true}
+      zIndex={10000}
     >
       <Menu.Target>
         <ActionIcon
@@ -91,8 +99,17 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
           style={{ borderRadius: "20px", padding: "0 8px" }}
         >
           <Group gap="xs">
-            <Text fw={500} size="sm">
-              {getLanguageFlag(currentLanguage)}
+            <Text
+              fw={600}
+              size="sm"
+              style={{
+                fontFamily: "monospace",
+                minWidth: "20px",
+                textAlign: "center",
+                letterSpacing: "0.5px",
+              }}
+            >
+              {getLanguageCode(currentLanguage)}
             </Text>
             <Text fw={500} size="sm">
               {currentLangInfo?.nativeName || currentLanguage.toUpperCase()}
@@ -117,10 +134,19 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
             }}
           >
             <Group gap="sm">
-              <Text size="sm" style={{ minWidth: "20px" }}>
-                {getLanguageFlag(lang.code)}
+              <Text
+                size="sm"
+                style={{
+                  fontFamily: "monospace",
+                  minWidth: "24px",
+                  textAlign: "center",
+                  fontWeight: 600,
+                  letterSpacing: "0.5px",
+                }}
+              >
+                {getLanguageCode(lang.code)}
               </Text>
-              <div>
+              <div style={{ flex: 1 }}>
                 <Text size="sm" fw={currentLanguage === lang.code ? 600 : 400}>
                   {lang.nativeName}
                 </Text>

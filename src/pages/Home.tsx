@@ -101,9 +101,7 @@ export default function Home() {
               )}
             </ActionIcon>
 
-            <Box style={{ flexShrink: 0 }}>
-              <LanguageSwitcher compact={isSmallMobile} />
-            </Box>
+            <LanguageSwitcher compact={isSmallMobile} />
 
             {user ? (
               <Box style={{ flexShrink: 0 }}>
