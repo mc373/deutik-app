@@ -1,28 +1,42 @@
 import React, { useCallback, useRef, useState, useEffect } from "react";
-import { Combobox, TextInput, useCombobox, Input } from "@mantine/core";
+import { Combobox, TextInput, useCombobox, Input, Select } from "@mantine/core";
 import type { ComboboxItem } from "@mantine/core";
 import { useApp } from "../contexts/AppContext";
 
 interface MultiSourceComboboxProps {
   wordLists: string[][];
+  rawWordData?: any[][]; // 新增：原始单词数据
   loading?: boolean;
   error?: string | null;
   inputValue: string;
   onInputChange: (v: string) => void;
-  onSelect: (word: string) => void;
+  onSelect: (word: string, rawData?: any) => void; // 修改：增加原始数据参数
   onFocus?: () => void;
+  onLanguageChange?: (lang: string) => void;
   debounceDelay?: number;
+  selectedLanguage?: string;
 }
+
+const languageOptions = [
+  { value: "de", label: "DE" },
+  { value: "en", label: "EN" },
+  { value: "zh", label: "中文" },
+  { value: "tr", label: "TR" },
+  { value: "ar", label: "AR" },
+];
 
 const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
   wordLists,
+  rawWordData = [],
   loading,
   error,
-  inputValue, // 来自父组件的值
+  inputValue,
   onInputChange,
   onSelect,
   onFocus,
+  onLanguageChange,
   debounceDelay = 800,
+  selectedLanguage = "de",
 }) => {
   const combobox = useCombobox({
     onDropdownClose: () => combobox.resetSelectedOption(),
@@ -43,12 +57,10 @@ const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
   // 防抖处理函数
   const debouncedInputChange = useCallback(
     (value: string) => {
-      // 清除之前的定时器
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
       }
 
-      // 设置新的定时器
       debounceRef.current = setTimeout(() => {
         onInputChange(value);
       }, debounceDelay);
@@ -57,13 +69,9 @@ const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
   );
 
   const handleInputChange = (value: string) => {
-    // 立即更新本地状态，保持输入框响应性
     setLocalValue(value);
-
-    // 使用防抖触发父组件的回调
     debouncedInputChange(value);
 
-    // 输入时自动打开下拉框
     if (value.length > 0) {
       combobox.openDropdown();
     } else {
@@ -72,13 +80,11 @@ const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
   };
 
   const handleBlur = () => {
-    // 清除防抖定时器
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
       debounceRef.current = null;
     }
 
-    // 确保本地状态与父组件状态同步
     if (localValue !== inputValue) {
       setLocalValue(inputValue);
     }
@@ -87,37 +93,86 @@ const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
   };
 
   const handleOptionSelect = (val: string) => {
-    onSelect(val);
+    // 查找对应的原始数据
+    const flatRawData = rawWordData.flat();
+    const selectedRawData = flatRawData.find(
+      (item: any) =>
+        item.lemma === val || `${item.lemma} - ${item.meaning}` === val
+    );
+
+    onSelect(val, selectedRawData);
     combobox.closeDropdown();
 
-    // 清除防抖定时器
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
       debounceRef.current = null;
     }
   };
 
-  const suggestions: ComboboxItem[] = wordLists
-    .flat()
-    .map((w) => ({ value: w, label: w }));
+  const handleLanguageChange = (lang: string | null) => {
+    if (lang && onLanguageChange) {
+      onLanguageChange(lang);
+    }
+  };
+
+  const suggestions: ComboboxItem[] = wordLists.flat().map((w, index) => ({
+    value: w,
+    label: w,
+  }));
 
   return (
-    <Combobox
-      store={combobox}
-      withinPortal={false}
-      onOptionSubmit={handleOptionSelect}
-    >
+    <Combobox store={combobox} onOptionSubmit={handleOptionSelect}>
       <Combobox.Target>
         <Input.Wrapper>
           <TextInput
             placeholder={t("app.inputword")}
-            value={localValue} // 使用本地状态
+            value={localValue}
             onChange={(e) => handleInputChange(e.currentTarget.value)}
             onFocus={() => {
               if (localValue.length > 0) combobox.openDropdown();
               onFocus?.();
             }}
             onBlur={handleBlur}
+            rightSectionWidth={70}
+            rightSection={
+              <Select
+                data={languageOptions}
+                value={selectedLanguage}
+                onChange={handleLanguageChange}
+                size="xs"
+                variant="unstyled"
+                style={{ width: 60 }}
+                comboboxProps={{
+                  position: "bottom",
+                  middlewares: { flip: false, shift: false },
+                  offset: 0,
+                  withinPortal: true,
+                }}
+                styles={{
+                  input: {
+                    padding: "0 5px",
+                    fontWeight: 600,
+                    fontSize: "12px",
+                    border: "none",
+                    background: "transparent",
+                    textAlign: "center",
+                  },
+                  dropdown: {
+                    minWidth: "80px",
+                  },
+                  option: {
+                    fontSize: "12px",
+                    padding: "4px 8px",
+                    textAlign: "center",
+                  },
+                }}
+              />
+            }
+            styles={{
+              input: {
+                paddingRight: 80,
+              },
+            }}
           />
         </Input.Wrapper>
       </Combobox.Target>
@@ -134,7 +189,7 @@ const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
                 {item.label}
               </Combobox.Option>
             ))
-          ) : localValue.length > 0 ? ( // 使用本地状态判断
+          ) : localValue.length > 0 ? (
             <Combobox.Empty>{t("app.wordnomatch")}</Combobox.Empty>
           ) : (
             <Combobox.Empty>{t("app.inputword")}</Combobox.Empty>

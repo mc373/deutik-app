@@ -3,15 +3,20 @@ import { useState, useEffect, useRef } from "react";
 export interface UseAutocompleteReturn {
   inputValue: string;
   setInputValue: (v: string) => void;
+  langValue: string;
+  setLanguageChange: (v: string) => void;
   suggestions: string[];
+  rawSuggestions: any[]; // 新增：存储原始建议数据
   isLoading: boolean;
   error: string | null;
   clearError: () => void;
 }
 
-export const useAutocomplete = (apiUrl: string): UseAutocompleteReturn => {
+export const useAutocomplete = (): UseAutocompleteReturn => {
   const [inputValue, setInputValue] = useState<string>("");
+  const [langValue, setLanguageChange] = useState<string>("de"); // 默认德语
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [rawSuggestions, setRawSuggestions] = useState<any[]>([]); // 存储原始数据
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,6 +36,7 @@ export const useAutocomplete = (apiUrl: string): UseAutocompleteReturn => {
     const fetchSuggestions = async (): Promise<void> => {
       if (inputValue.trim().length < 1) {
         setSuggestions([]);
+        setRawSuggestions([]);
         setError(null);
         return;
       }
@@ -39,25 +45,52 @@ export const useAutocomplete = (apiUrl: string): UseAutocompleteReturn => {
       setError(null);
 
       try {
-        const response = await fetch(
-          `${apiUrl}?term=${encodeURIComponent(inputValue)}`,
-          {
-            signal,
-            headers: { Accept: "application/json" },
-          }
-        );
+        let currentApiUrl;
+        if (langValue === "de") {
+          currentApiUrl =
+            "https://app.deutik.com/api/autocomplete?term=" +
+            encodeURIComponent(inputValue);
+        } else {
+          currentApiUrl =
+            "https://app.deutik.com/search/search?q=" +
+            encodeURIComponent(inputValue) +
+            "&lang=" +
+            langValue +
+            "&limit=5";
+        }
+
+        const response = await fetch(currentApiUrl, {
+          signal,
+          headers: { Accept: "application/json" },
+        });
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const data: string[] = await response.json();
-        setSuggestions(data || []);
+        const data = await response.json();
+
+        // 根据语言类型处理不同的响应结构
+        if (langValue === "de") {
+          // 德语API返回字符串数组
+          setSuggestions(data || []);
+          setRawSuggestions(
+            data ? data.map((item: string) => ({ lemma: item })) : []
+          );
+        } else {
+          // 其他语言API返回 { results: [...] } 结构
+          const results = data?.results || [];
+          setSuggestions(
+            results.map((item: any) => `${item.lemma} - ${item.meaning}`)
+          );
+          setRawSuggestions(results);
+        }
       } catch (err: any) {
         if (err.name !== "AbortError") {
           console.error("Fetch error:", err);
-          setError("Failed to fetch suggestions");
+          setError("Failed to fetch suggestions: " + err.message);
           setSuggestions([]);
+          setRawSuggestions([]);
         }
       } finally {
         setIsLoading(false);
@@ -68,12 +101,15 @@ export const useAutocomplete = (apiUrl: string): UseAutocompleteReturn => {
 
     // 清理函数
     return () => controller.abort();
-  }, [inputValue, apiUrl]);
+  }, [inputValue, langValue]);
 
   return {
     inputValue,
     setInputValue,
+    langValue,
+    setLanguageChange,
     suggestions,
+    rawSuggestions, // 返回原始数据
     isLoading,
     error,
     clearError: () => setError(null),

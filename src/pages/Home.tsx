@@ -65,13 +65,17 @@ export default function Home() {
             <img
               src={
                 colorScheme === "dark"
-                  ? "/assets/deutik_img_light.png"
-                  : "/assets/deutik_img.png"
+                  ? isSmallMobile
+                    ? "/assets/deutik_d_light.png"
+                    : "/assets/deutik_light.png"
+                  : isSmallMobile
+                  ? "/assets/deutik_d.png"
+                  : "/assets/deutik.png"
               }
               alt="Deutik Logo"
               style={{
-                width: isSmallMobile ? "60px" : "80px",
-                height: isSmallMobile ? "15px" : "20px",
+                width: isSmallMobile ? "20px" : "80px",
+                height: isSmallMobile ? "20px" : "20px",
                 flexShrink: 0,
               }}
             />

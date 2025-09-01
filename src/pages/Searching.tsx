@@ -11,20 +11,26 @@ const Searching: React.FC = () => {
   const {
     inputValue,
     setInputValue,
+    langValue,
+    setLanguageChange,
     suggestions,
+    rawSuggestions,
     isLoading,
     error,
     clearError,
-  } = useAutocomplete("https://app.deutik.com/api/autocomplete");
+  } = useAutocomplete();
 
   /* ---------- 选中词条后拉详情 ---------- */
-  const handleSelect = async (lemma: string) => {
+  const handleSelect = async (lemma: string, rawData?: any) => {
     setInputValue(lemma);
-    setCurWord(lemma);
+
+    // 如果是从其他语言选择的，使用原始数据中的德语单词
+    const germanWord = rawData?.lemma || lemma;
+    setCurWord(germanWord);
 
     try {
       const res = await fetch(
-        `https://app.deutik.com/api/word/${encodeURIComponent(lemma)}`
+        `https://app.deutik.com/api/word/${encodeURIComponent(germanWord)}`
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
@@ -46,10 +52,13 @@ const Searching: React.FC = () => {
       >
         <MultiSourceCombobox
           wordLists={[suggestions]}
+          rawWordData={[rawSuggestions]} // 传递原始数据
           loading={isLoading}
           error={error}
           inputValue={inputValue}
           onInputChange={setInputValue}
+          selectedLanguage={langValue}
+          onLanguageChange={setLanguageChange}
           onFocus={clearError}
           onSelect={handleSelect}
         />
