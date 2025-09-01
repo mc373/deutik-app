@@ -115,7 +115,7 @@ const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
     }
   };
 
-  const suggestions: ComboboxItem[] = wordLists.flat().map((w, index) => ({
+  const suggestions: ComboboxItem[] = wordLists.flat().map((w) => ({
     value: w,
     label: w,
   }));
