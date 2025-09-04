@@ -1,5 +1,9 @@
 // 修改后的 GermanWordDisplay 组件，支持多语言和主题
 import React, { useState, useEffect } from "react";
+import { IconVolume } from "@tabler/icons-react";
+import { useRef } from "react";
+// 修改导入语句
+import md5 from "crypto-js/md5";
 import {
   Card,
   Text,
@@ -13,6 +17,8 @@ import {
   Paper,
   ScrollArea,
   useMantineColorScheme,
+  ActionIcon,
+  Tooltip,
 } from "@mantine/core";
 import { IconChevronDown } from "@tabler/icons-react";
 import { useApp } from "../contexts/AppContext";
@@ -74,13 +80,62 @@ const GermanWordDisplay: React.FC<GermanWordDisplayProps> = ({
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [containerHeight, setContainerHeight] = useState("100vh");
 
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
   // 使用多语言context
   const { t, currentLanguage: userLanguage } = useApp();
 
   // 使用Mantine主题
   const { colorScheme } = useMantineColorScheme();
   const isDark = colorScheme === "dark";
+  // 计算单词的MD5哈希值（简单版，实际应用中可能需要完整的MD5实现）
+  const getWordMD5 = (word: string): string => {
+    return md5(word).toString();
+  };
 
+  // 播放音频函数
+  const playAudio = async () => {
+    if (!wordData?.lemma) return;
+
+    const md5Hash = getWordMD5(wordData.lemma);
+    const audioUrl = `https://app.deutik.com/audio/${md5Hash}.mp3`;
+
+    try {
+      setIsPlaying(true);
+
+      // 创建新的audio元素
+      const audio = new Audio(audioUrl);
+
+      // 添加事件监听器
+      audio.addEventListener("canplaythrough", () => {});
+
+      audio.addEventListener("ended", () => {
+        setIsPlaying(false);
+      });
+
+      audio.addEventListener("error", (e) => {
+        console.error("Audio error:", e);
+        setIsPlaying(false);
+      });
+
+      // 播放音频
+      await audio.play();
+    } catch (error) {
+      console.error("Audio play failed:", error);
+      setIsPlaying(false);
+    }
+  };
+
+  // 监听音频结束
+  useEffect(() => {
+    const audioElement = audioRef.current;
+    if (audioElement) {
+      const handleEnded = () => setIsPlaying(false);
+      audioElement.addEventListener("ended", handleEnded);
+      return () => audioElement.removeEventListener("ended", handleEnded);
+    }
+  }, []);
   // 监听窗口大小变化，动态计算高度
   useEffect(() => {
     const updateHeight = () => {
@@ -200,12 +255,31 @@ const GermanWordDisplay: React.FC<GermanWordDisplayProps> = ({
 
     return (
       <Paper p="sm" bg={isDark ? "dark.6" : "white"} withBorder={isDark}>
+        {/* 隐藏的audio元素 */}
+        <audio ref={audioRef} style={{ display: "none" }} />
         <Group justify="space-between" align="flex-start" gap="xs">
           <div style={{ flex: 1 }}>
             <Group gap="xs" align="center" mb={4}>
               <Text fw={700} size="lg" c={isDark ? "blue.4" : "blue.8"}>
                 {wordData.lemma}
               </Text>
+              {/* 添加音频按钮 */}
+              <Tooltip label={t("word.playAudio") || "播放发音"} withArrow>
+                <ActionIcon
+                  variant="subtle"
+                  size="lg"
+                  onClick={playAudio}
+                  color={isDark ? "blue" : "blue"}
+                  aria-label="播放发音"
+                  // 移除 loading 属性，手动控制显示
+                >
+                  {isPlaying ? (
+                    <Loader size="xs" color={isDark ? "blue.4" : "blue"} />
+                  ) : (
+                    <IconVolume size={18} />
+                  )}
+                </ActionIcon>
+              </Tooltip>
               {wordData.gender && (
                 <Badge
                   color="pink"
@@ -404,49 +478,8 @@ const GermanWordDisplay: React.FC<GermanWordDisplayProps> = ({
   }
 
   if (error) {
-    return (
-      <Box p="sm" bg={isDark ? "dark.6" : "white"}>
-        {/* <Alert
-          icon={<IconInfoCircle size={14} />}
-          color="red"
-          variant="light"
-          p="sm"
-        >
-          <Text size="sm" c={isDark ? "dark" : "dark"}>
-            {error}
-          </Text>
-          <Button
-            leftSection={<IconRefresh size={12} />}
-            onClick={fetchWordData}
-            size="xs"
-            mt="sm"
-            color={isDark ? "gray" : "blue"}
-          >
-            {t("app.retry") || "重试"}
-          </Button>
-        </Alert> */}
-      </Box>
-    );
+    return <Box p="sm" bg={isDark ? "dark.6" : "white"}></Box>;
   }
-
-  // if (!wordData) {
-  //   return (
-  //     <Box p="sm" bg={isDark ? "dark.6" : "white"} ta="center">
-  //       <Text size="sm" c={isDark ? "gray.4" : "dimmed"}>
-  //         {t("word.notFound") || "未找到单词数据"}
-  //       </Text>
-  //       <Button
-  //         leftSection={<IconRefresh size={12} />}
-  //         onClick={fetchWordData}
-  //         size="xs"
-  //         mt="sm"
-  //         color={isDark ? "gray" : "blue"}
-  //       >
-  //         {t("app.retry") || "重试"}
-  //       </Button>
-  //     </Box>
-  //   );
-  // }
 
   return (
     <ScrollArea

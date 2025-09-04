@@ -12,6 +12,8 @@ import {
   IconMoon,
   IconSearch,
   IconUserFilled,
+  IconX,
+  IconHome,
 } from "@tabler/icons-react";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import { GridMenu } from "../components/GridMenu";
@@ -20,7 +22,7 @@ import Learning from "./Learning";
 // import Unregelverb from "./Unregelverb";
 import Vocabulary from "./Vocabulary";
 import { useMediaQuery } from "@mantine/hooks";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import Pronunciation from "./Pronunciation";
 import { useApp } from "../contexts/AppContext";
 import React from "react";
@@ -38,7 +40,7 @@ export default function Home() {
   const MemoizedUnregelverb = React.memo(VerbScrollerWithData);
   const MemoizedVocabulary = React.memo(Vocabulary);
   const MemoizedPronunciation = React.memo(Pronunciation);
-
+  const navigate = useNavigate();
   return (
     <AppShell
       header={{ height: isMobile ? 70 : 60 }}
@@ -79,6 +81,16 @@ export default function Home() {
                 flexShrink: 0,
               }}
             />
+            <ActionIcon
+              variant="subtle"
+              size={isSmallMobile ? "md" : "lg"}
+              onClick={() => navigate("/")}
+              aria-label="后退"
+              c={colorScheme === "dark" ? "gray.2" : "dark.7"}
+              style={{ flexShrink: 0 }}
+            >
+              <IconHome size={isSmallMobile ? 16 : 20} />
+            </ActionIcon>
 
             {isMobile && (
               <ActionIcon
@@ -172,6 +184,17 @@ export default function Home() {
             flexDirection: "column",
           }}
         >
+          {isMobile && (
+            <ActionIcon
+              variant="subtle"
+              size={isSmallMobile ? "md" : "lg"}
+              onClick={modal.close}
+              c={colorScheme === "dark" ? "gray.2" : "dark.7"}
+              style={{ flexShrink: 0 }}
+            >
+              <IconX size={isSmallMobile ? 16 : 20} />
+            </ActionIcon>
+          )}
           <Searching />
         </Box>
       </AppShell.Aside>

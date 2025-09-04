@@ -10,7 +10,6 @@ import {
 import {
   Mic,
   Edit3,
-  BookMarked,
   Languages,
   MessageSquare,
   Headphones,
@@ -18,7 +17,8 @@ import {
   UserCircle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
+import { useApp } from "../contexts/AppContext";
+import { IconSearch } from "@tabler/icons-react";
 interface MenuItem {
   icon: React.ReactNode;
   title: string;
@@ -30,20 +30,20 @@ interface MenuItem {
 export function GridMenu() {
   const theme = useMantineTheme();
   const navigate = useNavigate();
-
+  const { modal } = useApp();
   const menuItems: MenuItem[] = [
     {
-      icon: <BookMarked size={24} />,
-      title: "背单词",
-      description: "通过智能记忆曲线学习单词",
-      path: "/Learn",
+      icon: <IconSearch size={24} />,
+      title: "查单词",
+      description: "多语言德语单词快速查询",
+      path: "/search",
       color: "blue",
     },
     {
       icon: <Languages size={24} />,
-      title: "学语法",
+      title: "背单词",
       description: "掌握德语语法规则",
-      path: "/grammar",
+      path: "/Learn",
       color: "teal",
     },
     {
@@ -69,7 +69,7 @@ export function GridMenu() {
     },
     {
       icon: <Headphones size={24} />,
-      title: "听听力",
+      title: "学语法",
       description: "提高听力理解能力",
       path: "/test",
       color: "cyan",
@@ -89,6 +89,13 @@ export function GridMenu() {
       color: "gray",
     },
   ];
+  const handleClick = (path: string) => {
+    if (path === "/search") {
+      modal.open();
+    } else {
+      navigate(path);
+    }
+  };
 
   return (
     <>
@@ -115,7 +122,7 @@ export function GridMenu() {
                     boxShadow: theme.shadows.md,
                   },
                 }}
-                onClick={() => navigate(item.path)}
+                onClick={() => handleClick(item.path)}
               >
                 <Group mb="md" gap="xs">
                   <Text c={`${item.color}.6`}>{item.icon}</Text>

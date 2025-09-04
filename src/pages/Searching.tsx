@@ -1,7 +1,7 @@
 import React from "react";
 import { useAutocomplete } from "../hooks/useAutocomplete";
 import MultiSourceCombobox from "../components/MultiSourceCombobox";
-import GermanWordDisplay, { WordEntry } from "../components/GermanWordDisplay";
+import GermanWordDisplay from "../components/GermanWordDisplay";
 import { useApp } from "../contexts/AppContext";
 
 const Searching: React.FC = () => {
@@ -27,18 +27,6 @@ const Searching: React.FC = () => {
     // 如果是从其他语言选择的，使用原始数据中的德语单词
     const germanWord = rawData?.lemma || lemma;
     setCurWord(germanWord);
-
-    try {
-      const res = await fetch(
-        `https://app.deutik.com/api/word/${encodeURIComponent(germanWord)}`
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-      const data: WordEntry = await res.json();
-      console.log("Word detail:", data);
-    } catch (err) {
-      console.error("Failed to fetch word detail:", err);
-    }
   };
 
   return (
