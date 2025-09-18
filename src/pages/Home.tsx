@@ -18,15 +18,19 @@ import {
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import { GridMenu } from "../components/GridMenu";
 import Searching from "./Searching";
-import Learning from "./Learning";
+
 // import Unregelverb from "./Unregelverb";
-import Vocabulary from "./Vocabulary";
+
 import { useMediaQuery } from "@mantine/hooks";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import Pronunciation from "./Pronunciation";
 import { useApp } from "../contexts/AppContext";
 import React from "react";
 import VerbScrollerWithData from "../components/VerbScrollerWithData";
+
+import Ocr from "./Ocr";
+
+import TestPage from "./TestPage";
 
 export default function Home() {
   const { user } = useClerk();
@@ -36,9 +40,9 @@ export default function Home() {
   const isSmallMobile = useMediaQuery("(max-width: 480px)", false);
 
   const MemoizedGridMenu = React.memo(GridMenu);
-  const MemoizedLearning = React.memo(Learning);
+
   const MemoizedUnregelverb = React.memo(VerbScrollerWithData);
-  const MemoizedVocabulary = React.memo(Vocabulary);
+
   const MemoizedPronunciation = React.memo(Pronunciation);
   const navigate = useNavigate();
   return (
@@ -153,9 +157,11 @@ export default function Home() {
             () => (
               <>
                 <Route path="/" element={<MemoizedGridMenu />} />
-                <Route path="/learn" element={<MemoizedLearning />} />
+
                 <Route path="/unregelverb" element={<MemoizedUnregelverb />} />
-                <Route path="/vocabulary" element={<MemoizedVocabulary />} />
+                <Route path="/dictation" element={<Ocr />} />
+                <Route path="/rtc" element={<TestPage />} />
+
                 <Route
                   path="/pronunciation"
                   element={<MemoizedPronunciation />}

@@ -234,11 +234,13 @@ const MultiSourceCombobox: React.FC<MultiSourceComboboxProps> = ({
           )}
         </div>
         <Combobox.Options>
-          {suggestions.map((item) => (
-            <Combobox.Option key={item.value} value={item.value}>
-              {item.label}
-            </Combobox.Option>
-          ))}
+          {suggestions
+            .sort((a, b) => a.label.localeCompare(b.label, "de"))
+            .map((item) => (
+              <Combobox.Option key={item.value} value={item.value}>
+                {item.label}
+              </Combobox.Option>
+            ))}
         </Combobox.Options>
       </Combobox.Dropdown>
     </Combobox>

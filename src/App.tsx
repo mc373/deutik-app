@@ -29,7 +29,7 @@ export default function App() {
     // 应用启动时初始化 IndexedDB
     const initializeDB = async () => {
       try {
-        await indexedDBService.init();
+        await indexedDBService.ready();
         console.log("IndexedDB initialized successfully");
       } catch (error) {
         console.error("Failed to initialize IndexedDB:", error);

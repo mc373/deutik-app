@@ -9,7 +9,6 @@ import {
 } from "@mantine/core";
 import {
   Mic,
-  Edit3,
   Languages,
   MessageSquare,
   Headphones,
@@ -18,7 +17,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../contexts/AppContext";
-import { IconSearch } from "@tabler/icons-react";
+import { IconSearch, IconWriting } from "@tabler/icons-react";
 interface MenuItem {
   icon: React.ReactNode;
   title: string;
@@ -43,7 +42,7 @@ export function GridMenu() {
       icon: <Languages size={24} />,
       title: "背单词",
       description: "掌握德语语法规则",
-      path: "/Learn",
+      path: "/rtc",
       color: "teal",
     },
     {
@@ -54,11 +53,11 @@ export function GridMenu() {
       color: "violet",
     },
     {
-      icon: <Edit3 size={24} />,
-      title: "写文章",
-      description: "练习德语写作",
-      path: "/writing",
-      color: "pink",
+      icon: <IconWriting size={24} />,
+      title: "默写练习",
+      description: "拍照识别文章并默写",
+      path: "/dictation",
+      color: "green",
     },
     {
       icon: <MessageSquare size={24} />,

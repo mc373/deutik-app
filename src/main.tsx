@@ -8,7 +8,7 @@ import messages_de from "./locales/de.json";
 import messages_ar from "./locales/ar.json";
 import messages_tr from "./locales/tr.json";
 import messages_zh from "./locales/zh.json";
-
+import "react-image-crop/dist/ReactCrop.css";
 // 定义消息类型
 type Messages = Record<string, Record<string, string>>; // 每种语言的消息都是一个字符串键值对
 
