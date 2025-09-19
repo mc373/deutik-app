@@ -23,6 +23,7 @@ import {
 } from "@tabler/icons-react";
 import { md5 } from "js-md5";
 import { useMediaQuery } from "@mantine/hooks";
+import { indexedDBService } from "../services/indexedDBService";
 
 interface TTSPlayerProps {
   text: string;
@@ -41,7 +42,7 @@ interface SentenceAudio {
   audio: HTMLAudioElement | null;
   loaded: boolean;
   error?: string;
-  translation?: string; // 为翻译预留
+  translation?: string;
 }
 
 const TTSPlayer: React.FC<TTSPlayerProps> = ({ text, onBack }) => {
@@ -56,226 +57,137 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({ text, onBack }) => {
   const [loop, setLoop] = useState(false);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [error, setError] = useState<string>(""); // 添加错误状态
-  // const audioRefs = useRef<HTMLAudioElement[]>([]);
+  const [error, setError] = useState<string>("");
+
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 分割文本为句子
+  /* ---------- 工具函数 ---------- */
   const splitTextToSentences = useCallback((text: string): string[] => {
     return text
       .split(/(?<=[.!?])\s+/)
-      .filter((sentence) => sentence.trim().length > 0)
-      .map((sentence) => sentence.trim());
+      .filter((s) => s.trim().length > 0)
+      .map((s) => s.trim());
   }, []);
 
-  // 生成MD5 hash
-  const generateHash = (text: string): string => {
-    return md5(text);
-  };
+  const generateHash = (text: string): string => md5(text);
 
-  // 从IndexDB获取音频
-  const getAudioFromIndexDB = async (
-    hash: string
-  ): Promise<AudioData | null> => {
+  /* ---------- 缓存读写（仅用 indexedDBService） ---------- */
+  const getAudioFromCache = async (hash: string): Promise<AudioData | null> => {
     try {
-      return new Promise((resolve) => {
-        const request = indexedDB.open("DeutikAppDatabase", 1);
-        // TTSDatabase;
-        request.onsuccess = (event) => {
-          const db = (event.target as IDBOpenDBRequest).result;
-          if (!db.objectStoreNames.contains("ttsCache")) {
-            resolve(null);
-            return;
-          }
-
-          const transaction = db.transaction(["ttsCache"], "readonly");
-          const store = transaction.objectStore("ttsCache");
-          const getRequest = store.get(hash);
-
-          getRequest.onsuccess = () => {
-            resolve(getRequest.result || null);
-          };
-
-          getRequest.onerror = () => {
-            resolve(null);
-          };
-        };
-
-        request.onerror = () => {
-          resolve(null);
-        };
-      });
-    } catch (error) {
-      console.error("Error getting audio from IndexDB:", error);
+      return await indexedDBService.get("ttsCache", hash);
+    } catch {
       return null;
     }
   };
 
-  // 保存音频到IndexDB
-  const saveAudioToIndexDB = async (
+  const saveAudioToCache = async (
     hash: string,
     audioData: AudioData
   ): Promise<void> => {
+    console.log(hash);
     try {
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open("DeutikAppDatabase", 1);
-
-        request.onupgradeneeded = (event) => {
-          const db = (event.target as IDBOpenDBRequest).result;
-          if (!db.objectStoreNames.contains("ttsCache")) {
-            db.createObjectStore("ttsCache", { keyPath: "hash" });
-          }
-        };
-
-        request.onsuccess = (event) => {
-          const db = (event.target as IDBOpenDBRequest).result;
-          const transaction = db.transaction(["ttsCache"], "readwrite");
-          const store = transaction.objectStore("ttsCache");
-          const putRequest = store.put({ ...audioData, hash });
-
-          putRequest.onsuccess = () => resolve();
-          putRequest.onerror = () => reject(putRequest.error);
-        };
-
-        request.onerror = () => {
-          reject(request.error);
-        };
-      });
-    } catch (error) {
-      console.error("Error saving audio to IndexDB:", error);
+      await indexedDBService.set("ttsCache", hash, { ...audioData, hash });
+    } catch {
       setError("无法保存音频到本地缓存");
     }
   };
 
-  // 从API获取音频
+  /* ---------- 网络请求 ---------- */
   const fetchAudioFromAPI = async (
     text: string,
     hash: string
   ): Promise<AudioData> => {
     const API_URL = "https://app.deutik.com/tts/";
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, model: "de_DE-thorsten-low", hash }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-    try {
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: text,
-          model: "de_DE-thorsten-low",
-          hash: hash,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error: ${response.status}`);
-      }
-
-      const blob = await response.blob();
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
-
-      return new Promise((resolve, reject) => {
-        reader.onloadend = () => {
-          const base64data = (reader.result as string).split(",")[1];
-          resolve({
-            data: base64data,
-            format: "audio/mp3",
-            hash: hash,
-          });
-        };
-        reader.onerror = () => {
-          setError("无法读取音频数据");
-          reject(new Error("无法读取音频数据"));
-        };
-        reader.readAsDataURL(blob);
-      });
-    } catch (error) {
-      console.error("Error fetching audio from API:", error);
-      setError("无法从服务器获取音频");
-      throw error;
-    }
+      reader.onloadend = () =>
+        resolve({
+          data: (reader.result as string).split(",")[1],
+          format: "audio/mp3",
+          hash,
+        });
+      reader.onerror = () => {
+        setError("无法读取音频数据");
+        reject(new Error("无法读取音频数据"));
+      };
+      reader.readAsDataURL(blob);
+    });
   };
 
-  // 获取或创建音频
+  /* ---------- 获取或创建音频 ---------- */
   const getOrCreateAudio = async (
     text: string,
     hash: string
   ): Promise<AudioData> => {
-    const cachedAudio = await getAudioFromIndexDB(hash);
-    if (cachedAudio) {
-      return cachedAudio;
-    }
+    const cached = await getAudioFromCache(hash);
+    if (cached) return cached;
 
-    const audioData = await fetchAudioFromAPI(text, hash);
-    await saveAudioToIndexDB(hash, audioData);
-
-    return audioData;
+    const fresh = await fetchAudioFromAPI(text, hash);
+    await saveAudioToCache(hash, fresh);
+    return fresh;
   };
 
-  // 加载所有音频
+  /* ---------- 批量加载 ---------- */
   const loadAllAudios = async () => {
     if (!text) {
       setError("没有可生成的文本");
       return;
     }
-
     setLoading(true);
     setProgress(0);
-    setError(""); // 重置错误状态
+    setError("");
 
-    const sentenceTexts = splitTextToSentences(text);
-    if (sentenceTexts.length === 0) {
+    const texts = splitTextToSentences(text);
+    if (!texts.length) {
       setError("文本无法分割为句子");
       setLoading(false);
       return;
     }
-    const sentenceAudios: SentenceAudio[] = sentenceTexts.map((text) => ({
-      text,
-      hash: generateHash(text),
+
+    const list: SentenceAudio[] = texts.map((t) => ({
+      text: t,
+      hash: generateHash(t),
       audio: null,
       loaded: false,
     }));
+    setSentences(list);
 
-    setSentences(sentenceAudios);
-
-    for (let i = 0; i < sentenceAudios.length; i++) {
+    for (let i = 0; i < list.length; i++) {
       try {
-        const audioData = await getOrCreateAudio(
-          sentenceAudios[i].text,
-          sentenceAudios[i].hash
-        );
-
+        const audioData = await getOrCreateAudio(list[i].text, list[i].hash);
         const audio = new Audio(`data:audio/mp3;base64,${audioData.data}`);
         audio.playbackRate = playbackRate;
 
         setSentences((prev) => {
-          const updated = [...prev];
-          updated[i] = { ...updated[i], audio, loaded: true };
-          return updated;
+          const next = [...prev];
+          next[i] = { ...next[i], audio, loaded: true };
+          return next;
         });
-
-        setProgress(((i + 1) / sentenceAudios.length) * 100);
-      } catch (error) {
-        console.error(`Error loading audio for sentence ${i}:`, error);
+        setProgress(((i + 1) / list.length) * 100);
+      } catch (e) {
+        console.error(`句子 ${i} 加载失败`, e);
         setSentences((prev) => {
-          const updated = [...prev];
-          updated[i] = {
-            ...updated[i],
-            error: "Failed to load audio",
-            loaded: true,
-          };
-          return updated;
+          const next = [...prev];
+          next[i] = { ...next[i], error: "Failed to load audio", loaded: true };
+          return next;
         });
       }
     }
-
     setLoading(false);
   };
 
-  const repeatCounts = useRef<{ [key: number]: number }>({});
+  /* ---------- 播放控制 ---------- */
+  const repeatCounts = useRef<Record<number, number>>({});
 
-  // 播放特定句子
   const playSentence = useCallback(
     (index: number) => {
       if (
@@ -292,122 +204,95 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({ text, onBack }) => {
         currentAudioRef.current.pause();
         currentAudioRef.current.currentTime = 0;
       }
-
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       }
 
       setCurrentIndex(index);
-      const audio = sentences[index].audio;
+      const audio = sentences[index].audio!;
+      currentAudioRef.current = audio;
+      audio.playbackRate = playbackRate;
 
-      if (audio) {
-        currentAudioRef.current = audio;
-        audio.playbackRate = playbackRate;
-
-        audio.onended = () => {
-          const currentRepeat = repeatCounts.current[index] || 0;
-
-          if (currentRepeat < repeatCount - 1) {
-            repeatCounts.current[index] = currentRepeat + 1;
-            audio.currentTime = 0;
-            audio.play().catch((error) => {
-              console.error("Error playing audio:", error);
-              setError("播放音频失败");
-              setIsPlaying(false);
-            });
+      audio.onended = () => {
+        const cur = repeatCounts.current[index] || 0;
+        if (cur < repeatCount - 1) {
+          repeatCounts.current[index] = cur + 1;
+          audio.currentTime = 0;
+          audio.play().catch(() => {
+            setError("播放音频失败");
+            setIsPlaying(false);
+          });
+        } else {
+          repeatCounts.current[index] = 0;
+          if (index < sentences.length - 1) {
+            timeoutRef.current = setTimeout(
+              () => playSentence(index + 1),
+              pauseBetweenSentences * 1000
+            );
+          } else if (loop) {
+            timeoutRef.current = setTimeout(
+              () => playSentence(0),
+              pauseBetweenSentences * 1000
+            );
           } else {
-            repeatCounts.current[index] = 0;
-
-            if (index < sentences.length - 1) {
-              timeoutRef.current = setTimeout(() => {
-                playSentence(index + 1);
-              }, pauseBetweenSentences * 1000);
-            } else if (loop) {
-              timeoutRef.current = setTimeout(() => {
-                playSentence(0);
-              }, pauseBetweenSentences * 1000);
-            } else {
-              setIsPlaying(false);
-            }
+            setIsPlaying(false);
           }
-        };
+        }
+      };
 
-        audio.play().catch((error) => {
-          console.error("Error playing audio:", error);
-          setIsPlaying(false);
-        });
-
-        setIsPlaying(true);
-      }
+      audio.play().catch(() => setIsPlaying(false));
+      setIsPlaying(true);
     },
     [sentences, playbackRate, pauseBetweenSentences, repeatCount, loop]
   );
 
-  // 开始或暂停播放
   const togglePlay = useCallback(() => {
     if (isPlaying) {
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-      }
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      currentAudioRef.current?.pause();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       setIsPlaying(false);
     } else {
-      if (currentIndex >= sentences.length) {
-        setCurrentIndex(0);
-      }
-      playSentence(currentIndex);
+      const idx = currentIndex >= sentences.length ? 0 : currentIndex;
+      playSentence(idx);
     }
   }, [isPlaying, currentIndex, sentences.length, playSentence]);
 
-  // 播放特定句子
   const playSpecificSentence = useCallback(
     (index: number) => {
       if (isPlaying) {
-        if (currentAudioRef.current) {
-          currentAudioRef.current.pause();
-        }
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-        }
+        currentAudioRef.current?.pause();
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
       }
-
       setCurrentIndex(index);
       playSentence(index);
     },
     [isPlaying, playSentence]
   );
 
-  // 初始化加载音频
+  /* ---------- 副作用 ---------- */
   useEffect(() => {
-    if (text) {
-      loadAllAudios();
-    }
+    if (text) loadAllAudios();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text]);
 
-  // 清理资源
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-      }
-    };
-  }, []);
+  useEffect(
+    () => () => {
+      timeoutRef.current && clearTimeout(timeoutRef.current);
+      currentAudioRef.current?.pause();
+    },
+    []
+  );
 
+  /* ---------- UI ---------- */
   return (
     <Box>
-      {/* 显示错误信息 */}
       {error && (
         <Alert color="red" mb="md">
           {error}
         </Alert>
       )}
-      {/* 返回按钮 */}
+
       <Group mb="md" justify="space-between">
         <Button
           variant="subtle"
@@ -434,7 +319,6 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({ text, onBack }) => {
         </Button>
       </Group>
 
-      {/* 加载进度 */}
       {loading && (
         <Box mb="md">
           <Text size="sm" mb="xs">
@@ -444,12 +328,10 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({ text, onBack }) => {
         </Box>
       )}
 
-      {/* 播放设置 */}
       <Paper p="md" mb="md" bg={colorScheme === "dark" ? "dark.6" : "gray.0"}>
         <Text size="sm" fw={500} mb="md">
           播放设置
         </Text>
-
         <Stack gap="md">
           <Group grow>
             <div>
@@ -482,11 +364,10 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({ text, onBack }) => {
                 min={0}
                 max={10}
                 value={pauseBetweenSentences}
-                onChange={(value) => setPauseBetweenSentences(Number(value))}
+                onChange={(v) => setPauseBetweenSentences(Number(v))}
                 size={isMobile ? "sm" : "md"}
               />
             </div>
-
             <div>
               <Text size="sm" mb="xs">
                 每句重复次数
@@ -495,7 +376,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({ text, onBack }) => {
                 min={1}
                 max={10}
                 value={repeatCount}
-                onChange={(value) => setRepeatCount(Number(value))}
+                onChange={(v) => setRepeatCount(Number(v))}
                 size={isMobile ? "sm" : "md"}
               />
             </div>
@@ -505,41 +386,39 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({ text, onBack }) => {
             <Switch
               label="循环播放"
               checked={loop}
-              onChange={(event) => setLoop(event.currentTarget.checked)}
+              onChange={(e) => setLoop(e.currentTarget.checked)}
               size={isMobile ? "sm" : "md"}
             />
           </Group>
         </Stack>
       </Paper>
 
-      {/* 句子列表 */}
       <Paper p="md" bg={colorScheme === "dark" ? "dark.6" : "gray.0"}>
         <Text size="sm" fw={500} mb="md">
           句子列表
         </Text>
-
         <Stack gap="xs">
-          {sentences.map((sentence, index) => (
+          {sentences.map((s, i) => (
             <Paper
-              key={index}
+              key={i}
               p="sm"
               withBorder
               bg={colorScheme === "dark" ? "dark.5" : "white"}
               style={{
                 cursor: "pointer",
-                borderColor: index === currentIndex ? "#228be6" : undefined,
-                borderWidth: index === currentIndex ? 2 : 1,
+                borderColor: i === currentIndex ? "#228be6" : undefined,
+                borderWidth: i === currentIndex ? 2 : 1,
               }}
-              onClick={() => playSpecificSentence(index)}
+              onClick={() => playSpecificSentence(i)}
             >
               <Stack gap="xs">
                 <Group justify="space-between">
                   <Text size="sm" style={{ flex: 1 }}>
-                    {sentence.text}
+                    {s.text}
                   </Text>
 
-                  {sentence.loaded ? (
-                    sentence.error ? (
+                  {s.loaded ? (
+                    s.error ? (
                       <ActionIcon variant="subtle" color="red" size="sm">
                         <IconVolume size={16} />
                       </ActionIcon>
@@ -547,7 +426,7 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({ text, onBack }) => {
                       <ActionIcon
                         variant="subtle"
                         color={
-                          index === currentIndex && isPlaying ? "blue" : "gray"
+                          i === currentIndex && isPlaying ? "blue" : "gray"
                         }
                         size="sm"
                       >
@@ -561,10 +440,9 @@ const TTSPlayer: React.FC<TTSPlayerProps> = ({ text, onBack }) => {
                   )}
                 </Group>
 
-                {/* 翻译区域 - 暂时隐藏 */}
-                {sentence.translation && (
+                {s.translation && (
                   <Text size="sm" c="dimmed" style={{ fontStyle: "italic" }}>
-                    {sentence.translation}
+                    {s.translation}
                   </Text>
                 )}
               </Stack>

@@ -277,6 +277,11 @@ const SpellCheckEditor = forwardRef<SpellCheckEditorRef, SpellCheckEditorProps>(
               autoFixedContent,
               "insert-characters"
             );
+            // 保持 selection
+            newState = EditorState.forceSelection(
+              newState,
+              newState.getSelection()
+            );
             onChange?.(autoFixedContent.getPlainText());
           }
 
@@ -284,10 +289,14 @@ const SpellCheckEditor = forwardRef<SpellCheckEditorRef, SpellCheckEditorProps>(
             const decorator = new CompositeDecorator([
               createSpellCheckStrategy(errors),
             ]);
-            setEditorState(EditorState.set(newState, { decorator }));
+            newState = EditorState.set(newState, { decorator });
           } else {
-            setEditorState(EditorState.set(newState, { decorator: undefined }));
+            newState = EditorState.set(newState, { decorator: undefined });
           }
+          // 保持 selection
+          setEditorState(
+            EditorState.forceSelection(newState, newState.getSelection())
+          );
         } catch (err: any) {
           setError(`拼写检查失败: ${err.message}`);
         } finally {
@@ -336,7 +345,7 @@ const SpellCheckEditor = forwardRef<SpellCheckEditorRef, SpellCheckEditorProps>(
         selection,
         suggestion
       );
-      const newState = EditorState.push(
+      let newState = EditorState.push(
         editorState,
         newContent,
         "insert-characters"
@@ -345,6 +354,8 @@ const SpellCheckEditor = forwardRef<SpellCheckEditorRef, SpellCheckEditorProps>(
 
       setContextMenu(null);
       onChange?.(newText);
+      // 保持 selection
+      newState = EditorState.forceSelection(newState, newState.getSelection());
       setEditorState(newState);
 
       setIsChecking(true);
@@ -359,60 +370,20 @@ const SpellCheckEditor = forwardRef<SpellCheckEditorRef, SpellCheckEditorProps>(
           const decorator = new CompositeDecorator([
             createSpellCheckStrategy(freshErrors),
           ]);
-          setEditorState(EditorState.set(newState, { decorator }));
+          newState = EditorState.set(newState, { decorator });
         } else {
-          setEditorState(EditorState.set(newState, { decorator: undefined }));
+          newState = EditorState.set(newState, { decorator: undefined });
         }
+        // 保持 selection
+        setEditorState(
+          EditorState.forceSelection(newState, newState.getSelection())
+        );
       } catch (e) {
         console.error("重新检查失败", e);
       } finally {
         setIsChecking(false);
       }
     };
-
-    /* -------------- 改进错误重映射 -------------- */
-    const remapErrorsAfterEdit = useCallback(
-      (currentContent: ContentState, oldErrors: SpellError[]): SpellError[] => {
-        // const newText = currentContent.getPlainText();
-        const blockMap = currentContent.getBlockMap();
-        const relocatedErrors: SpellError[] = [];
-
-        oldErrors.forEach((err) => {
-          const block = blockMap.get(err.blockKey);
-          if (!block) return;
-
-          const blockText = block.getText();
-          const regex = new RegExp(
-            `\\b${err.word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
-            "g"
-          );
-
-          // Find the word in the current block text
-          let match;
-          while ((match = regex.exec(blockText)) !== null) {
-            const localStart = match.index;
-            const localEnd = localStart + err.word.length;
-
-            // Check if this match is close to the original position
-            if (
-              Math.abs(localStart - err.start) <= err.word.length ||
-              blockText.slice(localStart, localEnd) === err.word
-            ) {
-              relocatedErrors.push({
-                ...err,
-                start: localStart,
-                end: localEnd,
-                blockKey: err.blockKey,
-              });
-              break; // Take the first reasonable match
-            }
-          }
-        });
-
-        return relocatedErrors;
-      },
-      []
-    );
 
     /* -------------- 编辑内容变化 -------------- */
     const handleEditorChange = (newEditorState: EditorState) => {
@@ -423,39 +394,18 @@ const SpellCheckEditor = forwardRef<SpellCheckEditorRef, SpellCheckEditorProps>(
         onChange?.(newText);
       }
 
-      const lastChangeType = newEditorState.getLastChangeType();
-      if (lastChangeType === "insert-characters" && contextMenu === null) {
-        setEditorState(newEditorState);
-        return;
-      }
-
-      if (
-        lastChangeType &&
-        [
-          "insert-characters",
-          "backspace-character",
-          "delete-character",
-        ].includes(lastChangeType)
-      ) {
-        const remapped = remapErrorsAfterEdit(
-          newEditorState.getCurrentContent(),
-          spellErrors
-        );
-        setSpellErrors(remapped);
-        if (remapped.length) {
-          const decorator = new CompositeDecorator([
-            createSpellCheckStrategy(remapped),
-          ]);
-          setEditorState(EditorState.set(newEditorState, { decorator }));
-        } else {
-          setEditorState(
-            EditorState.set(newEditorState, { decorator: undefined })
-          );
-        }
-        return;
-      }
-
-      setEditorState(newEditorState);
+      // 清空旧 errors 和 decorator，避免错位
+      setSpellErrors([]);
+      const noDecoratorState = EditorState.set(newEditorState, {
+        decorator: undefined,
+      });
+      // 保持 selection
+      setEditorState(
+        EditorState.forceSelection(
+          noDecoratorState,
+          noDecoratorState.getSelection()
+        )
+      );
     };
 
     /* -------------- 初始检查 -------------- */
@@ -465,10 +415,13 @@ const SpellCheckEditor = forwardRef<SpellCheckEditorRef, SpellCheckEditorProps>(
 
     /* -------------- 当 initialText 变化时更新编辑器 -------------- */
     useEffect(() => {
-      setEditorState(
-        EditorState.createWithContent(ContentState.createFromText(initialText))
+      const newState = EditorState.createWithContent(
+        ContentState.createFromText(initialText)
       );
+      setEditorState(newState);
       lastContentRef.current = initialText;
+      // 初始时清空 errors，直到 check
+      setSpellErrors([]);
     }, [initialText]);
 
     /* -------------- 渲染 -------------- */

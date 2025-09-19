@@ -1,6 +1,6 @@
 // hooks/useIndexedDB.ts
 import { useState, useCallback } from "react";
-import { indexedDBService } from "../services/indexedDBService";
+import { indexedDBService, StoreName } from "../services/indexedDBService";
 
 export const useIndexedDB = () => {
   const [isReady, setIsReady] = useState(false);
@@ -17,21 +17,21 @@ export const useIndexedDB = () => {
   }, []);
 
   const getData = useCallback(
-    async (storeName: string, key: string) => {
+    async (storeName: StoreName, key: string) => {
       if (!isReady) {
         await initialize();
       }
-      return indexedDBService.getData(storeName, key);
+      return indexedDBService.get(storeName, key);
     },
     [isReady, initialize]
   );
 
   const setData = useCallback(
-    async (storeName: string, key: string, value: any) => {
+    async (storeName: StoreName, key: string, value: any) => {
       if (!isReady) {
         await initialize();
       }
-      return indexedDBService.setData(storeName, key, value);
+      return indexedDBService.set(storeName, key, value);
     },
     [isReady, initialize]
   );
@@ -41,7 +41,7 @@ export const useIndexedDB = () => {
     initialize,
     getData,
     setData,
-    deleteData: indexedDBService.deleteData.bind(indexedDBService),
-    clearStore: indexedDBService.clearStore.bind(indexedDBService),
+    deleteData: indexedDBService.delete.bind(indexedDBService),
+    clearStore: indexedDBService.clear.bind(indexedDBService),
   };
 };

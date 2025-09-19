@@ -534,6 +534,14 @@ export function OCRProcessor() {
           const processingTime = Date.now() - regionStartTime;
 
           // +++ 新增: 获取原始文本后，立即处理该区域的断行和错误 +++
+          // const filteredLines = data.lines.filter(
+          //   (line: any) => line.confidence >= 60
+          // );
+
+          // 将过滤后的行合并为文本
+          // let regionText = filteredLines
+          //   .map((line: any) => line.text)
+          //   .join("\n");
           let regionText = data.text;
           console.log("原始数据" + region.sequence + ":", regionText);
 
@@ -608,14 +616,20 @@ export function OCRProcessor() {
   // };
   // 编辑文本变化处理
   // 处理编辑器文本变化
-  const [showSpellCheck] = useState(false);
+  const [showSpellCheck, setShowSpellCheck] = useState(false); // 修正为完整 useState
 
   const [showTTSPlayer, setShowTTSPlayer] = useState(false);
-  const [editorText, setEditorText] = useState(processedText);
+  const [editorText, setEditorText] = useState(""); // 初始化为空
   const [isCheckingSpell, setIsCheckingSpell] = useState(false);
   const spellCheckEditorRef = useRef<{ handleSpellCheck: () => Promise<void> }>(
     null
   );
+
+  // 当 processedText 更新时，同步到 editorText（如果 editorText 未被用户修改）
+  useEffect(() => {
+    setEditorText(processedText); // 每次 OCR 后立即同步
+  }, [processedText]);
+
   // 添加拼写检查函数
   const handleSpellCheck = useCallback(async () => {
     if (!editorText) return;
@@ -625,16 +639,17 @@ export function OCRProcessor() {
       if (spellCheckEditorRef.current) {
         await spellCheckEditorRef.current.handleSpellCheck();
       }
+      setShowSpellCheck(!showSpellCheck); // toggle 显示
     } catch (error) {
       console.error("拼写检查失败:", error);
       setError("拼写检查失败");
     } finally {
       setIsCheckingSpell(false);
     }
-  }, [editorText]);
+  }, [editorText, showSpellCheck]);
+
   const handleEditorChange = (value: string) => {
-    setEditorText(value);
-    setProcessedText(value); // 同步更新 processedText
+    setEditorText(value); // 只更新 editorText，不再更新 processedText
   };
 
   return (
@@ -718,6 +733,8 @@ export function OCRProcessor() {
                   setError("没有可生成的文本");
                   return;
                 }
+                console.log("editorText:", editorText);
+                console.log("processedText:", processedText);
                 setShowTTSPlayer(true);
               }}
               variant="outline"
@@ -745,7 +762,7 @@ export function OCRProcessor() {
       )}
       {showTTSPlayer ? (
         <TTSPlayer
-          text={editorText || processedText}
+          text={editorText || processedText} // 优先用 editorText
           onBack={() => setShowTTSPlayer(false)}
         />
       ) : (
@@ -844,6 +861,7 @@ export function OCRProcessor() {
                         borderRadius: "50%",
                         cursor: "nwse-resize",
                         zIndex: 11,
+                        touchAction: "none", // 添加这一行
                       }}
                     />
                   )}
@@ -926,7 +944,7 @@ export function OCRProcessor() {
               💡 提示：拖动区域移动位置，拖动右下角调整大小，点击区域选中
             </Text>
           )}
-          {/*文本编辑取*/}
+          {/*文本编辑区*/}
           {(processedText || processedText != "") && (
             <SpellCheckEditor
               ref={spellCheckEditorRef}
