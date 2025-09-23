@@ -10,17 +10,23 @@ export function joinBrokenWords(text: string): string {
   // 规则 1: 最高优先级 处理连字符，连字符+换行的情况直接去除连字符和回车
   //  - 处理【任何字母】+【连字符】+【换行】+【任何字母】
   processedText = processedText.replace(
-    /([a-zA-ZäöüÄÖÜß])-\s*\n\s*([a-zA-ZäöüÄÖÜß])/gi,
+    /([a-zA-ZäöüÄÖÜß])-\s?\n\s*([a-zA-ZäöüÄÖÜß])/gi,
     "$1$2"
   );
+  // console.log("After Rule 1:", processedText);
 
-  const regex2 = /\r?\n\s?/g;
-  // 使用正则表达式2替换换行符后跟零个或一个空格的情况
+  // 如果结尾是 .!? 并且后面第一个非空白字符不是换行，才把换行替成空格
+  const regex2 = /(?<![.!?])\r?\n/g;
   processedText = processedText.replace(regex2, " ");
+  // console.log("After Rule 2:", processedText);
 
-  // 使用正则表达式将多个连续空格替换为一个空格
-  processedText = processedText.replace(/\s+/g, " ");
+  // 使用正则表达式2替换换行符后跟零个或一个空格的情况
+  // const regex2 = /\r?\n\s?/g;
+  // processedText = processedText.replace(regex2, " ");
 
+  // 替换连续的空格字符（不包括换行）
+  processedText = processedText.replace(/[ ]+/g, " ");
+  // console.log("After Rule 2.5  :", processedText);
   // 规则4标点去重：替换函数：保留省略号和特定的标点符号组合，去重其他连续标点符号
   const regex = /([.,!?;:])\s?([.,!?;:])/g;
   processedText = processedText.replace(regex, (match) => {
@@ -35,7 +41,7 @@ export function joinBrokenWords(text: string): string {
     // 保留第一个标点符号，去重其他
     return match[0];
   });
-
+  // console.log("After Rule 3  :", processedText);
   const regex1 = /([a-zA-ZäöüÄÖÜß])(\s*\n)/g;
 
   // 替换函数：在句尾补上句点
@@ -50,6 +56,7 @@ export function joinBrokenWords(text: string): string {
     }
     return match;
   });
+  // console.log("After Rule   4:", processedText);
 
   return processedText;
 }

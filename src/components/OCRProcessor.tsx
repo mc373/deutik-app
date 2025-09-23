@@ -29,10 +29,6 @@ import {
 } from "@tabler/icons-react";
 // import { useDisclosure } from "@mantine/hooks";
 import { useDrag } from "@use-gesture/react";
-import { createWorker } from "tesseract.js";
-import { getGermanConfig } from "../utils/ocrConfig";
-import { joinBrokenWords } from "../utils/ocrPostProcessor/lineBreakJoiner";
-import { fixCommonErrors } from "../utils/ocrPostProcessor/errorCorrector";
 import SpellCheckEditor from "./SpellCheckEditor";
 import TTSPlayer from "./TTSPlayer";
 
@@ -91,7 +87,6 @@ export function OCRProcessor() {
   const imageRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const workerRef = useRef<any>(null);
 
   const captureFromCamera = async () => {
     try {
@@ -112,13 +107,17 @@ export function OCRProcessor() {
             const reader = new FileReader();
 
             reader.onload = (e) => {
-              setImage(e.target?.result as string);
-              setRegions([]);
-              // setResults([]);
-              setProcessedText("");
-              setRotation(0);
-              setProgressText("");
-              resolve();
+              resizeImageIfNeeded(e.target?.result as string)
+                .then((resizedImage) => {
+                  setImage(resizedImage);
+                  setRegions([]);
+                  // setResults([]);
+                  setProcessedText("");
+                  setRotation(0);
+                  setProgressText("");
+                  resolve();
+                })
+                .catch(reject);
             };
 
             reader.onerror = () => {
@@ -200,44 +199,39 @@ export function OCRProcessor() {
   const selectedRegion = regions.find((r) => r.isSelected);
   const selectedRegionId = selectedRegion?.id || null;
 
-  // 初始化Tesseract worker
-  useEffect(() => {
-    const initializeWorker = async () => {
-      try {
-        console.log("Initializing Tesseract.js worker...");
-        workerRef.current = await createWorker("deu", 1, {
-          logger: (m) => {
-            if (m.status === "recognizing text") {
-              setProgress(Math.round(m.progress * 100));
-              setProgressText(`识别中: ${Math.round(m.progress * 100)}%`);
-            } else if (m.status === "loading tesseract core") {
-              setProgressText("加载Tesseract核心...");
-            } else if (m.status === "initializing tesseract") {
-              setProgressText("初始化Tesseract...");
-            } else if (m.status === "loading language traineddata") {
-              setProgressText("加载语言模型...");
-            }
-          },
-        });
+  // 图像预处理函数：如果长边 >1024，等比缩小到长边=1024
+  const resizeImageIfNeeded = (imageDataUrl: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.src = imageDataUrl;
+      img.onload = () => {
+        let { width, height } = img;
+        const maxSize = 1024;
+        if (Math.max(width, height) <= maxSize) {
+          resolve(imageDataUrl); // 小于1024，不处理
+          return;
+        }
 
-        const config = getGermanConfig();
-        await workerRef.current.setParameters(config);
+        // 计算缩放比例
+        const ratio = maxSize / Math.max(width, height);
+        const newWidth = Math.round(width * ratio);
+        const newHeight = Math.round(height * ratio);
 
-        console.log("Tesseract.js worker initialized");
-      } catch (err) {
-        console.error("Failed to initialize Tesseract worker:", err);
-        setError("OCR引擎初始化失败");
-      }
-    };
-
-    initializeWorker();
-
-    return () => {
-      if (workerRef.current) {
-        workerRef.current.terminate();
-      }
-    };
-  }, []);
+        // 使用 canvas 调整大小
+        const canvas = document.createElement("canvas");
+        canvas.width = newWidth;
+        canvas.height = newHeight;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Canvas context not available"));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, newWidth, newHeight);
+        resolve(canvas.toDataURL("image/jpeg", 0.9)); // 以 JPEG 格式输出，质量 90%
+      };
+      img.onerror = reject;
+    });
+  };
 
   // 处理文件上传
   const handleFileUpload = async (
@@ -252,11 +246,13 @@ export function OCRProcessor() {
 
       const reader = new FileReader();
       reader.onload = (e) => {
-        setImage(e.target?.result as string);
-        setRegions([]);
-        // setResults([]);
-        setProcessedText("");
-        setRotation(0);
+        resizeImageIfNeeded(e.target?.result as string).then((resizedImage) => {
+          setImage(resizedImage);
+          setRegions([]);
+          // setResults([]);
+          setProcessedText("");
+          setRotation(0);
+        });
       };
       reader.readAsDataURL(file);
       if (event.target) {
@@ -488,23 +484,20 @@ export function OCRProcessor() {
     });
   };
 
-  // 处理连字符和换行
-  // 完整的文本处理函数
-
   // 合并相邻区域的文本
   const mergeRegionTexts = (results: OCRResult[]): string => {
     const sortedResults = [...results].sort((a, b) => a.sequence - b.sequence);
 
     // 简单的合并逻辑：直接按顺序用空格连接
-    return sortedResults.map((result) => result.text).join(" ");
+    return sortedResults.map((result) => result.text).join("\n");
 
     // 或者更智能一点的逻辑：如果区域在原文中相距较远，可以用两个换行符连接
     // ... (这部分可以后续优化)
   };
 
-  // 执行OCR识别
+  // 执行OCR识别（改为调用 PaddleOCR API）
   const performOCR = async () => {
-    if (!image || regions.length === 0 || !workerRef.current) return;
+    if (!image || regions.length === 0) return;
 
     setIsProcessing(true);
     setError("");
@@ -512,96 +505,83 @@ export function OCRProcessor() {
     setProgressText("开始处理...");
 
     try {
-      const ocrResults: OCRResult[] = [];
-      const totalStartTime = Date.now();
+      const formData = new FormData();
+      const correctedRegions: OCRRegion[] = [];
 
+      // 准备所有文件
       for (let i = 0; i < regions.length; i++) {
         const region = regions[i];
-        setProgressText(`处理区域 ${i + 1}/${regions.length}...`);
-        setProgress(Math.round((i / regions.length) * 100));
+        setProgressText(`准备区域 ${i + 1}/${regions.length}...`);
+        setProgress(Math.round((i / regions.length) * 50));
 
-        const regionStartTime = Date.now();
+        const correctedRegion = correctRegionCoordinates(region);
+        correctedRegions.push(correctedRegion);
 
-        try {
-          // 修正坐标到实际图片坐标
-          const correctedRegion = correctRegionCoordinates(region);
-
-          // 裁剪图像区域
-          const croppedImage = await cropImage(correctedRegion);
-
-          // OCR识别
-          const { data } = await workerRef.current.recognize(croppedImage);
-          const processingTime = Date.now() - regionStartTime;
-
-          // +++ 新增: 获取原始文本后，立即处理该区域的断行和错误 +++
-          // const filteredLines = data.lines.filter(
-          //   (line: any) => line.confidence >= 60
-          // );
-
-          // 将过滤后的行合并为文本
-          // let regionText = filteredLines
-          //   .map((line: any) => line.text)
-          //   .join("\n");
-          let regionText = data.text;
-          console.log("原始数据" + region.sequence + ":", regionText);
-
-          regionText = joinBrokenWords(regionText); // 先处理断行
-          regionText = fixCommonErrors(regionText); // 再修正错误
-          // +++ 新增结束 +++
-
-          ocrResults.push({
-            regionId: region.id,
-            sequence: region.sequence,
-            text: regionText,
-            confidence: data.confidence,
-            coordinates: correctedRegion,
-            processingTime,
-          });
-
-          console.log("Region coordinates:", {
-            screen: {
-              x: region.x,
-              y: region.y,
-              width: region.width,
-              height: region.height,
-            },
-            actual: correctedRegion,
-          });
-        } catch (error) {
-          console.error(`Error processing region ${i + 1}:`, error);
-          ocrResults.push({
-            regionId: region.id,
-            sequence: region.sequence,
-            text: "",
-            confidence: 0,
-            coordinates: correctRegionCoordinates(region),
-            processingTime: 0,
-          });
+        const croppedBase64 = await cropImage(correctedRegion);
+        const byteString = atob(croppedBase64.split(",")[1]);
+        const ab = new ArrayBuffer(byteString.length);
+        const ia = new Uint8Array(ab);
+        for (let j = 0; j < byteString.length; j++) {
+          ia[j] = byteString.charCodeAt(j);
         }
+        const blob = new Blob([ab], { type: "image/png" });
+
+        formData.append("files", blob, `region_${i}.png`);
       }
 
-      const totalTime = Date.now() - totalStartTime;
+      setProgressText("正在识别文本...");
+      setProgress(75);
 
-      // setResults(ocrResults.sort((a, b) => a.sequence - b.sequence));
+      // 批量发送请求
+      const response = await fetch("https://paddle.deutik.com/ocr/rec/batch", {
+        method: "POST",
+        body: formData,
+      });
 
-      // 处理并合并文本
-      // const finalText = cleanGermanText(mergeRegionTexts(ocrResults));
+      if (!response.ok) {
+        throw new Error(`API 请求失败: ${response.statusText}`);
+      }
 
-      const mergedRawText = mergeRegionTexts(ocrResults); // 假设这个函数返回拼接后的原始字符串
-      const finalText = processOCRText(mergedRawText, processingOptions); // 使用新管道
+      const apiData = await response.json();
+      // console.log("OCR API 返回数据:", apiData);
 
-      setProcessedText(finalText);
+      if (apiData.status === "success") {
+        const ocrResults: OCRResult[] = [];
 
-      setProgress(100);
-      setProgressText(`处理完成，耗时 ${totalTime}ms`);
+        apiData.results.forEach((batchResult: any, index: number) => {
+          if (batchResult.status === "success") {
+            const region = regions[index];
+            const regionText = batchResult.results
+              .map((line: any) => line.text)
+              .join("\n");
 
-      // open();
+            ocrResults.push({
+              regionId: region.id,
+              sequence: region.sequence,
+              text: regionText,
+              confidence:
+                batchResult.results.length > 0
+                  ? batchResult.results[0].score
+                  : 0,
+              coordinates: correctedRegions[index],
+              processingTime: batchResult.processing_time,
+            });
+          }
+        });
+
+        // 合并文本
+        const mergedRawText = mergeRegionTexts(ocrResults);
+        // console.log("合并后的原始文本:", mergedRawText);
+        const finalText = processOCRText(mergedRawText, processingOptions);
+
+        setProcessedText(finalText);
+        setProgress(100);
+        setProgressText(`处理完成，共识别 ${apiData.total_files} 个区域`);
+      }
     } catch (err: any) {
       setError(err.message || "识别失败");
     } finally {
       setIsProcessing(false);
-      setProgress(0);
-      setProgressText("");
     }
   };
 
@@ -733,8 +713,8 @@ export function OCRProcessor() {
                   setError("没有可生成的文本");
                   return;
                 }
-                console.log("editorText:", editorText);
-                console.log("processedText:", processedText);
+                // console.log("editorText:", editorText);
+                // console.log("processedText:", processedText);
                 setShowTTSPlayer(true);
               }}
               variant="outline"
@@ -954,8 +934,6 @@ export function OCRProcessor() {
           )}
         </>
       )}
-
-      {/* 结果模态框 */}
     </Paper>
   );
 }

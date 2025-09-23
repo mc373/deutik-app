@@ -1,38 +1,33 @@
 // indexedDBService.ts
 import { openDB, IDBPDatabase, DBSchema } from "idb";
 
-/* ---------------- 类型定义（可按需扩展） ---------------- */
-interface DeutikDB extends DBSchema {
-  verbs: {
-    key: string;
-    value: any;
-  };
-  settings: {
-    key: string;
-    value: any;
-  };
-  ttsCache: {
-    key: string;
-    value: { hash: string; data: ArrayBuffer };
-  };
+export interface AudioData {
+  hash: string;
+  data: string;
+  format: string;
+  sample_rate?: number;
+  bits_per_sample?: number;
 }
 
-/* ---------------- 常量 ---------------- */
-export const STORE_NAMES = {
+interface DeutikDB extends DBSchema {
+  verbs: { key: string; value: any };
+  settings: { key: string; value: any };
+  ttsCache: { key: string; value: AudioData };
+}
+
+const STORE_NAMES = {
   VERBS: "verbs",
   SETTINGS: "settings",
   TTS_CACHE: "ttsCache",
 } as const;
 
-export type StoreName = (typeof STORE_NAMES)[keyof typeof STORE_NAMES];
+type StoreName = (typeof STORE_NAMES)[keyof typeof STORE_NAMES];
 
-/* ---------------- 单例 service ---------------- */
 class IndexedDBService {
   private static instance: IndexedDBService;
   private db: IDBPDatabase<DeutikDB> | null = null;
   private dbName = "DeutikAppDatabase";
-  private version = 1; // 初始版本，后续动态抬高
-  private isInitializing = false;
+  private version = 1;
   private initPromise: Promise<IDBPDatabase<DeutikDB>> | null = null;
 
   private constructor() {}
@@ -44,32 +39,17 @@ class IndexedDBService {
     return IndexedDBService.instance;
   }
 
-  /* 获取当前真实版本（临时连接） */
-  private async getCurrentVersion(): Promise<number> {
-    const temp = await openDB<DeutikDB>(this.dbName);
-    const v = temp.version;
-    temp.close();
-    return v;
+  // Added ready method to ensure database is initialized
+  async ready(): Promise<IDBPDatabase<DeutikDB>> {
+    return this.getDB();
   }
 
-  /* 初始化（支持自动升级） */
-  async init(): Promise<IDBPDatabase<DeutikDB>> {
+  private async getDB(): Promise<IDBPDatabase<DeutikDB>> {
     if (this.db) return this.db;
-    if (this.isInitializing && this.initPromise) return this.initPromise!;
-
-    this.isInitializing = true;
-
-    // 动态决定是否需要升级
-    const currentVer = await this.getCurrentVersion();
-    const tempDB = await openDB<DeutikDB>(this.dbName, currentVer);
-    const needTts = !tempDB.objectStoreNames.contains(STORE_NAMES.TTS_CACHE);
-    tempDB.close();
-
-    this.version = needTts ? currentVer + 1 : currentVer;
+    if (this.initPromise) return this.initPromise;
 
     this.initPromise = openDB<DeutikDB>(this.dbName, this.version, {
       upgrade(db) {
-        // 创建缺失的 store
         if (!db.objectStoreNames.contains(STORE_NAMES.VERBS)) {
           db.createObjectStore(STORE_NAMES.VERBS);
         }
@@ -82,48 +62,118 @@ class IndexedDBService {
       },
     });
 
+    this.db = await this.initPromise;
+    return this.db;
+  }
+
+  async getAudio(hash: string): Promise<AudioData | null> {
     try {
-      this.db = await this.initPromise;
-      return this.db;
-    } catch (e) {
-      this.isInitializing = false;
-      this.initPromise = null;
-      throw e;
-    } finally {
-      this.isInitializing = false;
+      const db = await this.getDB();
+      const result = await db.get(STORE_NAMES.TTS_CACHE, hash);
+      return result || null;
+    } catch (error) {
+      console.error("获取音频缓存失败:", error);
+      return null;
     }
   }
 
-  /* 对外唯一入口：保证 ttsCache 存在并返回 db */
-  async ready(): Promise<IDBPDatabase<DeutikDB>> {
-    return this.init();
+  async saveAudio(audioData: AudioData): Promise<void> {
+    try {
+      const db = await this.getDB();
+      await db.put(STORE_NAMES.TTS_CACHE, audioData);
+    } catch (error) {
+      console.error("保存音频缓存失败:", error);
+      throw error;
+    }
   }
 
-  /* 基础 CRUD（已带类型） */
-  async get(storeName: StoreName, key: string) {
-    const db = await this.ready();
-    return db.get(storeName, key);
+  async clearAudioCache(): Promise<void> {
+    try {
+      const db = await this.getDB();
+      await db.clear(STORE_NAMES.TTS_CACHE);
+    } catch (error) {
+      console.error("清空音频缓存失败:", error);
+      throw error;
+    }
   }
 
-  async set(storeName: StoreName, key: string, value: any) {
-    const db = await this.ready();
-    return db.put(storeName, value, key);
+  async getAllCachedHashes(): Promise<string[]> {
+    try {
+      const db = await this.getDB();
+      return await db.getAllKeys(STORE_NAMES.TTS_CACHE);
+    } catch (error) {
+      console.error("获取缓存哈希列表失败:", error);
+      return [];
+    }
   }
 
-  async delete(storeName: StoreName, key: string) {
-    const db = await this.ready();
-    return db.delete(storeName, key);
+  async getCacheStats(): Promise<{ count: number; totalSize: number }> {
+    try {
+      const db = await this.getDB();
+      const allData = await db.getAll(STORE_NAMES.TTS_CACHE);
+
+      const count = allData.length;
+      const totalSize = allData.reduce((size, item) => {
+        const decodedSize = Math.ceil((item.data.length * 3) / 4);
+        return size + decodedSize;
+      }, 0);
+
+      return {
+        count,
+        totalSize: Math.round(totalSize / 1024),
+      };
+    } catch (error) {
+      console.error("获取缓存统计失败:", error);
+      return { count: 0, totalSize: 0 };
+    }
   }
 
-  async clear(storeName: StoreName) {
-    const db = await this.ready();
-    return db.clear(storeName);
+  async get(storeName: StoreName, key: string): Promise<any> {
+    try {
+      const db = await this.getDB();
+      const result = await db.get(storeName, key);
+      return result || null;
+    } catch (error) {
+      console.error(`获取存储 ${storeName} 的数据失败:`, error);
+      return null;
+    }
   }
 
-  async close() {
+  async set(storeName: StoreName, key: string, value: any): Promise<void> {
+    try {
+      const db = await this.getDB();
+      await db.put(storeName, value, key);
+    } catch (error) {
+      console.error(`保存到存储 ${storeName} 失败:`, error);
+      throw error;
+    }
+  }
+
+  async delete(storeName: StoreName, key: string): Promise<void> {
+    try {
+      const db = await this.getDB();
+      await db.delete(storeName, key);
+    } catch (error) {
+      console.error(`删除存储 ${storeName} 的数据失败:`, error);
+      throw error;
+    }
+  }
+
+  async clear(storeName: StoreName): Promise<void> {
+    try {
+      const db = await this.getDB();
+      await db.clear(storeName);
+    } catch (error) {
+      console.error(`清空存储 ${storeName} 失败:`, error);
+      throw error;
+    }
+  }
+
+  async close(): Promise<void> {
     if (this.db) {
       this.db.close();
       this.db = null;
+      this.initPromise = null;
     }
   }
 }

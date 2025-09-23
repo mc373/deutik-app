@@ -1,3 +1,4 @@
+import { joinBrokenWords } from "./lineBreakJoiner";
 import { insertSentenceBoundaries } from "./sentenceBoundaryDetector";
 import { formatFinalText } from "./textFormatter";
 import { ProcessingOptions } from "./types";
@@ -18,6 +19,8 @@ export function processOCRText(
   if (options.smartParagraphDetection) {
     pipeline.push(insertSentenceBoundaries); // 划分句子边界
   }
+  pipeline.push(joinBrokenWords); // 最终格式化
+
   pipeline.push(formatFinalText); // 最终格式化
 
   let result = mergedText;
