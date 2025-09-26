@@ -72,7 +72,6 @@ export function OCRProcessor() {
   const [processedText, setProcessedText] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string>("");
-  const [rotation, setRotation] = useState(0);
   // const [opened, { open, close }] = useDisclosure(false);
   const [isDragging, setIsDragging] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -113,7 +112,6 @@ export function OCRProcessor() {
                   setRegions([]);
                   // setResults([]);
                   setProcessedText("");
-                  setRotation(0);
                   setProgressText("");
                   resolve();
                 })
@@ -251,7 +249,6 @@ export function OCRProcessor() {
           setRegions([]);
           // setResults([]);
           setProcessedText("");
-          setRotation(0);
         });
       };
       reader.readAsDataURL(file);
@@ -409,6 +406,64 @@ export function OCRProcessor() {
     });
   };
 
+  // 旋转图片数据（使用 Canvas 生成新 Base64）
+  const rotateImageData = async (
+    src: string,
+    degrees: number
+  ): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.src = src;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Canvas context not available"));
+          return;
+        }
+
+        // 根据旋转角度调整画布尺寸
+        const absDegrees = degrees % 360;
+        if (absDegrees === 90 || absDegrees === 270) {
+          canvas.width = img.height;
+          canvas.height = img.width;
+        } else {
+          canvas.width = img.width;
+          canvas.height = img.height;
+        }
+
+        // 应用旋转
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate((degrees * Math.PI) / 180);
+        ctx.drawImage(
+          img,
+          -img.width / 2,
+          -img.height / 2,
+          img.width,
+          img.height
+        );
+
+        resolve(canvas.toDataURL("image/jpeg", 0.9));
+      };
+      img.onerror = reject;
+    });
+  };
+
+  // 旋转图片（更新图片源，清空区域）
+  const rotateImage = async () => {
+    if (!image) return;
+    try {
+      setProgressText("正在旋转图片...");
+      const rotated = await rotateImageData(image, 90);
+      setImage(rotated);
+      setRegions([]); // 清空区域，因为坐标变化
+      setProgressText("");
+    } catch (err) {
+      setError("旋转失败");
+    }
+  };
+
+  // 裁剪图片（简化版，无旋转处理）
   const cropImage = async (region: OCRRegion): Promise<string> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -424,57 +479,21 @@ export function OCRProcessor() {
         canvas.width = region.width;
         canvas.height = region.height;
 
-        // 根据旋转角度处理裁剪
-        if (rotation !== 0) {
-          // 创建临时canvas处理旋转
-          const tempCanvas = document.createElement("canvas");
-          const tempCtx = tempCanvas.getContext("2d");
+        // 应用简单滤镜（可选，与原代码一致，仅在需要时添加）
+        ctx.filter = "contrast(1.5) brightness(1.2)";
 
-          if (!tempCtx) {
-            reject(new Error("Could not get temp canvas context"));
-            return;
-          }
-
-          // 根据旋转角度调整尺寸
-          tempCanvas.width = img.width;
-          tempCanvas.height = img.height;
-
-          // 绘制原图
-          tempCtx.drawImage(img, 0, 0);
-          tempCtx.filter = "contrast(1.5) brightness(1.2)"; // 简单滤镜
-          // 旋转处理
-          ctx.save();
-          ctx.translate(canvas.width / 2, canvas.height / 2);
-          ctx.rotate((-rotation * Math.PI) / 180); // 反向旋转以校正
-
-          // 绘制裁剪区域（考虑旋转后的坐标）
-          ctx.drawImage(
-            tempCanvas,
-            region.x,
-            region.y,
-            region.width,
-            region.height,
-            -region.width / 2,
-            -region.height / 2,
-            region.width,
-            region.height
-          );
-
-          ctx.restore();
-        } else {
-          // 无旋转的直接裁剪
-          ctx.drawImage(
-            img,
-            region.x,
-            region.y,
-            region.width,
-            region.height,
-            0,
-            0,
-            region.width,
-            region.height
-          );
-        }
+        // 直接裁剪
+        ctx.drawImage(
+          img,
+          region.x,
+          region.y,
+          region.width,
+          region.height,
+          0,
+          0,
+          region.width,
+          region.height
+        );
 
         resolve(canvas.toDataURL("image/png"));
       };
@@ -583,11 +602,6 @@ export function OCRProcessor() {
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  // 旋转图片
-  const rotateImage = () => {
-    setRotation((prev) => (prev + 90) % 360);
   };
 
   // // 复制文本到剪贴板
@@ -774,7 +788,6 @@ export function OCRProcessor() {
                 style={{
                   maxWidth: "100%",
                   display: "block",
-                  transform: `rotate(${rotation}deg)`,
                   transition: "transform 0.3s ease",
                   userSelect: "none",
                   pointerEvents: "none",
