@@ -215,7 +215,6 @@ const SpellCheckEditor = forwardRef<SpellCheckEditorRef, SpellCheckEditorProps>(
         });
         return { errors, autoFixedContent: newContent };
       }
-      console.log("Detected errors:", errors);
 
       return { errors };
     };
@@ -259,7 +258,6 @@ const SpellCheckEditor = forwardRef<SpellCheckEditorRef, SpellCheckEditorProps>(
         setIsChecking(true);
         setError("");
         try {
-          console.log("0");
           const contentState = editorState.getCurrentContent();
           const text = contentState.getPlainText();
           const result = await checkWithLanguageTool(text);

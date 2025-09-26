@@ -5,7 +5,7 @@
  */
 export function joinBrokenWords(text: string): string {
   let processedText = text;
-  console.log("Original text:", processedText);
+  // console.log("Original text:", processedText);
 
   // 规则 1: 最高优先级 处理连字符，连字符+换行的情况直接去除连字符和回车
   //  - 处理【任何字母】+【连字符】+【换行】+【任何字母】

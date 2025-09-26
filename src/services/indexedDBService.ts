@@ -21,7 +21,7 @@ const STORE_NAMES = {
   TTS_CACHE: "ttsCache",
 } as const;
 
-type StoreName = (typeof STORE_NAMES)[keyof typeof STORE_NAMES];
+export type StoreName = (typeof STORE_NAMES)[keyof typeof STORE_NAMES];
 
 class IndexedDBService {
   private static instance: IndexedDBService;

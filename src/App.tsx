@@ -30,7 +30,6 @@ export default function App() {
     const initializeDB = async () => {
       try {
         await indexedDBService.ready();
-        console.log("IndexedDB initialized successfully");
       } catch (error) {
         console.error("Failed to initialize IndexedDB:", error);
       }
